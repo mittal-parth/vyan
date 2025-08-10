@@ -1,100 +1,163 @@
 "use client";
 
-import Image from "next/image";
-import { ConnectButton } from "thirdweb/react";
-import thirdwebIcon from "@public/thirdweb.svg";
-import { client } from "./client";
+import { useState } from "react";
+import { TbBatteryFilled, TbGauge, TbTemperature } from "react-icons/tb";
 
 export default function Home() {
+  const [isACOn, setIsACOn] = useState(false);
+
   return (
-    <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
-      <div className="py-20">
+    <div className="min-h-screen p-6">
+      <div className="max-w-sm mx-auto space-y-2">
         <Header />
-
-        <div className="flex justify-center mb-20">
-          <ConnectButton
-            client={client}
-            appMetadata={{
-              name: "Example App",
-              url: "https://example.com",
-            }}
-          />
-        </div>
-
-        <ThirdwebResources />
+        <CarSection />
+        <StatusSection />
+        <InformationSection />
+        <ACControl isACOn={isACOn} setIsACOn={setIsACOn} />
       </div>
-    </main>
+    </div>
   );
 }
 
 function Header() {
   return (
-    <header className="flex flex-col items-center mb-20 md:mb-20">
-      <Image
-        src={thirdwebIcon}
-        alt=""
-        className="size-[150px] md:size-[150px]"
-        style={{
-          filter: "drop-shadow(0px 0px 24px #a726a9a8)",
-        }}
-      />
-
-      <h1 className="text-2xl md:text-6xl font-semibold md:font-bold tracking-tighter mb-6 text-zinc-100">
-        thirdweb SDK
-        <span className="text-zinc-300 inline-block mx-1"> + </span>
-        <span className="inline-block -skew-x-6 text-blue-500"> Next.js </span>
-      </h1>
-
-      <p className="text-zinc-300 text-base">
-        Read the{" "}
-        <code className="bg-zinc-800 text-zinc-300 px-2 rounded py-1 text-sm mx-1">
-          README.md
-        </code>{" "}
-        file to get started.
-      </p>
-    </header>
+    <div className="flex items-center justify-between">
+      {/* Hamburger Menu */}
+      <button className="w-12 h-12 rounded-2xl bg-neutral-800 nm-highlight-neutral-700/50 nm-shadow-neutral-950/70 nm-protrude-md flex items-center justify-center hover:nm-dent-sm transition-all duration-200">
+        <div className="space-y-1">
+          <div className="w-5 h-0.5 bg-neutral-400 rounded-full"></div>
+          <div className="w-5 h-0.5 bg-neutral-400 rounded-full"></div>
+          <div className="w-5 h-0.5 bg-neutral-400 rounded-full"></div>
+        </div>
+      </button>
+      
+      {/* Title */}
+      <div className="text-center">
+        <p className="text-neutral-400 text-sm font-medium">Tesla</p>
+        <h1 className="text-neutral-200 text-lg font-semibold">Cybertruck</h1>
+      </div>
+      
+      {/* User Profile */}
+      <button className="w-12 h-12 rounded-2xl bg-custom-bg-light shadow-neuro-dark-outset flex items-center justify-center hover:shadow-neuro-dark-pressed transition-all duration-200">
+        <div className="w-7 h-7 rounded-full bg-custom-bg-light shadow-neuro-dark-inset"></div>
+      </button>
+    </div>
   );
 }
 
-function ThirdwebResources() {
+function CarSection() {
   return (
-    <div className="grid gap-4 lg:grid-cols-3 justify-center">
-      <ArticleCard
-        title="thirdweb SDK Docs"
-        href="https://portal.thirdweb.com/typescript/v5"
-        description="thirdweb TypeScript SDK documentation"
-      />
-
-      <ArticleCard
-        title="Components and Hooks"
-        href="https://portal.thirdweb.com/typescript/v5/react"
-        description="Learn about the thirdweb React components and hooks in thirdweb SDK"
-      />
-
-      <ArticleCard
-        title="thirdweb Dashboard"
-        href="https://thirdweb.com/dashboard"
-        description="Deploy, configure, and manage your smart contracts from the dashboard."
+    <div className="p-2 flex items-center justify-center">
+      {/* Cybertruck image */}
+      <img 
+        src="/cybertruck.png" 
+        alt="Tesla Cybertruck" 
+        className="w-200 h-200 object-contain"
       />
     </div>
   );
 }
 
-function ArticleCard(props: {
-  title: string;
-  href: string;
-  description: string;
+function StatusSection() {
+  return (
+    <div>
+      <h2 className="text-neutral-200 text-lg font-semibold">Status</h2>
+      <div className="flex justify-between space-x-3 p-4">
+        <StatusCard
+          label="Battery"
+          value="54%"
+          icon={TbBatteryFilled}
+        />
+        <StatusCard
+          label="Range"
+          value="297km"
+          icon={TbGauge}
+        />
+        <StatusCard
+          label="Temperature"
+          value="27°C"
+          icon={TbTemperature}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatusCard({ label, value, icon: Icon }: {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <a
-      href={props.href + "?utm_source=next-template"}
-      target="_blank"
-      className="flex flex-col border border-zinc-800 p-4 rounded-lg hover:bg-zinc-900 transition-colors hover:border-zinc-700"
-    >
-      <article>
-        <h2 className="text-lg font-semibold mb-2">{props.title}</h2>
-        <p className="text-sm text-zinc-400">{props.description}</p>
-      </article>
-    </a>
+    <div className="flex-1 py-4 px-2 flex items-start space-x-2">
+      <Icon className="w-5 h-5 text-neutral-400" />
+      <div className="flex flex-col space-y-1">
+        <span className="text-neutral-400 text-sm font-medium">{label}</span>
+        <p className="text-neutral-200 font-bold text-sm">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function InformationSection() {
+  return (
+    <div>
+      <h2 className="text-neutral-200 text-lg font-semibold mb-4">Information</h2>
+      <div className="flex space-x-5">
+        <InfoCard
+          title="Engine"
+          subtitle="Active"
+        />
+        <InfoCard
+          title="Climate"
+          subtitle="A/C is ON"
+        />
+        <InfoCard
+          title="Fan speed"
+          subtitle="Low"
+        />
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({ title, subtitle, className = "flex-1" }: {
+  title: string;
+  subtitle: string;
+  className?: string;
+}) {
+  return (
+    <div className={`bg-custom-bg-shadow-dark rounded-lg shadow-neuro-dark-deep p-4 ${className} flex flex-col justify-end h-24 mb-8`}>
+      <h3 className="text-neutral-200 font-semibold text-sm">{title}</h3>
+      <p className="text-neutral-400 text-xs">{subtitle}</p>
+    </div>
+  );
+}
+
+function ACControl({ isACOn, setIsACOn }: {
+  isACOn: boolean;
+  setIsACOn: (value: boolean) => void;
+}) {
+  return (
+    <div className="bg-custom-bg-dark shadow-neuro-dark-deeper rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-neutral-200 font-semibold text-base">A/C is {isACOn ? 'ON' : 'OFF'}</span>
+        <button
+          onClick={() => setIsACOn(!isACOn)}
+          className={`w-14 h-7 rounded-full relative transition-all duration-300 ${
+            isACOn ? 'bg-blue-500' : 'bg-custom-bg-dark shadow-neuro-dark-inset'
+          }`}
+        >
+          <div
+            className={`w-6 h-6 rounded-full bg-custom-bg-light shadow-neuro-dark-outset absolute top-0.5 transition-transform duration-300 ${
+              isACOn ? 'translate-x-7' : 'translate-x-0.5'
+            }`}
+          ></div>
+        </button>
+      </div>
+      <p className="text-neutral-400 text-xs leading-relaxed">
+        Tap to turn off or swipe to control A/C / Fan speed, configure shortcut for a fast setup.
+      </p>
+    </div>
   );
 }

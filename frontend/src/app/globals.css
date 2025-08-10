@@ -16,7 +16,10 @@
 }
 
 @layer base {
-	body {
-		@apply bg-zinc-950 text-neutral-200;
+	html, body {
+		@apply text-neutral-200;
+		background: linear-gradient(180deg, #36363C 0%, #111114 100%);
+		background-attachment: fixed;
+		min-height: 100vh;
 	}
 }
