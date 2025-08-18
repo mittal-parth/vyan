@@ -19,7 +19,7 @@ export default function Home() {
   );
 }
 
-function Header() {
+export function Header() {
   return (
     <div className="flex items-center justify-between">
       {/* Hamburger Menu */}
@@ -33,8 +33,8 @@ function Header() {
       
       {/* Title */}
       <div className="text-center">
-        <p className="text-neutral-400 text-sm font-medium">Tesla</p>
-        <h1 className="text-neutral-200 text-lg font-semibold">Cybertruck</h1>
+        <p className="text-neutral-400 text-sm font-medium">Vyan</p>
+        <h1 className="text-neutral-200 text-lg font-semibold">Your Battery</h1>
       </div>
       
       {/* User Profile */}
@@ -50,9 +50,9 @@ function CarSection() {
     <div className="p-2 flex items-center justify-center">
       {/* Cybertruck image */}
       <img 
-        src="/cybertruck.png" 
+        src="/battery-1.png" 
         alt="Tesla Cybertruck" 
-        className="w-200 h-200 object-contain"
+        className="object-contain w-52 h-52"
       />
     </div>
   );
