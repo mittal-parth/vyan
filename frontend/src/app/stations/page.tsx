@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "../page";
 import {
   TbSearch,
@@ -125,8 +126,17 @@ function StationsList({ stations }: { stations: Station[] }) {
 }
 
 function StationCard({ station }: { station: Station }) {
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    router.push(`/stations/${station.id}`);
+  };
+
   return (
-    <div className="bg-custom-bg-shadow-dark rounded-lg shadow-neuro-dark-deep p-6 m-4">
+    <div 
+      className="bg-custom-bg-shadow-dark rounded-lg shadow-neuro-dark-deep p-6 m-4 cursor-pointer hover:shadow-neuro-dark-pressed transition-all duration-200"
+      onClick={handleCardClick}
+    >
       {/* Top Section */}
       <div className="flex items-center space-x-4">
         {/* Left Side - Image with Rating */}

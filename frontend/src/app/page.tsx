@@ -50,9 +50,9 @@ function CarSection() {
     <div className="p-2 flex items-center justify-center">
       {/* Cybertruck image */}
       <img 
-        src="/battery-1.png" 
+        src="/cybertruck.png" 
         alt="Tesla Cybertruck" 
-        className="object-contain w-52 h-52"
+        className="object-contain w-100 h-100"
       />
     </div>
   );
@@ -121,7 +121,7 @@ function InformationSection() {
   );
 }
 
-function InfoCard({ title, subtitle, className = "flex-1" }: {
+export function InfoCard({ title, subtitle, className = "flex-1" }: {
   title: string;
   subtitle: string;
   className?: string;
