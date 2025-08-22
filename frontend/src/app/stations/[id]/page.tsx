@@ -168,7 +168,7 @@ export default function StationDetailPage({ params }: { params: { id: string } }
         <div className="flex space-x-8 p-6">
           {/* Left Half: Animated Battery */}
           <div className="flex-1 flex items-end justify-center">
-            <AnimatedBattery percentage={10} />
+            <AnimatedBattery percentage={39} />
           </div>
           
           {/* Right Half: Three Info Cards */}
