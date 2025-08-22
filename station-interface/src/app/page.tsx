@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TbBatteryFilled, TbWifi, TbSignal, TbNfc, TbCheck, TbX, TbLoader } from "react-icons/tb";
+import { TbBatteryFilled, TbWifi, TbSignalE, TbNfc, TbCheck, TbX, TbLoader } from "react-icons/tb";
 
 export default function StationInterface() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -81,7 +81,7 @@ function Header() {
       <div className="flex space-x-2">
         <div className="w-3 h-3 rounded-full bg-green-500 shadow-neuro-dark-outset"></div>
         <TbWifi className="w-5 h-5 text-neutral-400" />
-        <TbSignal className="w-5 h-5 text-neutral-400" />
+        <TbSignalE className="w-5 h-5 text-neutral-400" />
       </div>
     </div>
   );
