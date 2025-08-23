@@ -3,16 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/app/page";
+import { getStationByNumericId, type Station } from "@/data/stations";
 import { TbBattery, TbBolt, TbCoin, TbWallet, TbArrowRight, TbArrowLeft } from "react-icons/tb";
-
-interface Station {
-  id: number;
-  name: string;
-  location: string;
-  distance: string;
-  rating: number;
-  image: string;
-}
 
 // Station-specific InfoCard component
 function StationInfoCard({ title, subtitle, className = "flex-1" }: {
@@ -36,15 +28,22 @@ export default function StationDetailPage({ params }: { params: { id: string } }
   const sliderRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
-  // Mock data for the specific station
-  const station: Station = {
-    id: parseInt(params.id),
-    name: "Supercharge Station",
-    location: "Westheimer Rd. Santa Ana, Illinois 85486",
-    distance: "4.2 km",
-    rating: 4.2,
-    image: "/battery-1.png",
-  };
+  // Get station data from centralized data
+  const station = getStationByNumericId(parseInt(params.id));
+  
+  if (!station) {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="max-w-sm mx-auto space-y-8">
+          <Header />
+          <div className="text-center pt-6">
+            <h1 className="text-neutral-200 text-2xl">Station Not Found</h1>
+            <p className="text-neutral-400 text-sm mt-2">The requested station could not be found.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -161,26 +160,26 @@ export default function StationDetailPage({ params }: { params: { id: string } }
         {/* Station Name */}
         <div className="text-center pt-6">
           <h1 className="text-neutral-200 text-2xl">{station.name}</h1>
-          <p className="text-neutral-400 text-sm mt-2">{station.location}</p>
+          <p className="text-neutral-400 text-sm mt-2">{station.address || station.location}</p>
         </div>
 
         {/* Main Content: Battery + Info Cards */}
         <div className="flex space-x-8 p-6">
           {/* Left Half: Animated Battery */}
           <div className="flex-1 flex items-end justify-center">
-            <AnimatedBattery percentage={39} />
+            <AnimatedBattery percentage={station.percentage || Math.round((station.charged / station.total) * 100)} />
           </div>
           
           {/* Right Half: Three Info Cards */}
           <div className="flex-1 space-y-4">
             <StationInfoCard
               title="Available Batteries"
-              subtitle="7/10"
+              subtitle={`${station.availableBatteries || station.charged}/${station.totalSlots || station.total}`}
               className="w-full h-20"
             />
             <StationInfoCard
               title="Swap Fee"
-              subtitle="5 STK"
+              subtitle={`${station.swapFee || 5} STK`}
               className="w-full h-20"
             />
             <StationInfoCard

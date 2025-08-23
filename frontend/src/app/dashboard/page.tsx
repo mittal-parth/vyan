@@ -11,6 +11,7 @@ import Map, {
   Layer,
 } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { STATIONS, AI_ROUTES, AI_ALERTS, getStatusColor, type Station, type AIRoute, type AIAlert } from "@/data/stations";
 import {
   TbBatteryFilled,
   TbMap,
@@ -264,119 +265,15 @@ function StationsView() {
     zoom: 10,
   });
 
-  const [stations, setStations] = useState([
-    {
-      id: "A",
-      location: "Downtown Hub",
-      charged: 12,
-      total: 20,
-      status: "ok",
-      forecast: [8, 12, 15, 12, 10, 8, 6],
-      coordinates: [-122.4194, 37.7749],
-      address: "123 Market St, San Francisco, CA",
-      predictedEmptyIn: null,
-    },
-    {
-      id: "B",
-      location: "Airport Terminal",
-      charged: 3,
-      total: 20,
-      status: "at-risk",
-      forecast: [10, 8, 6, 3, 2, 4, 6],
-      coordinates: [-122.375, 37.6189],
-      address: "SFO International Airport, San Francisco, CA",
-      predictedEmptyIn: "2.5 hours",
-    },
-    {
-      id: "C",
-      location: "Mall Complex",
-      charged: 0,
-      total: 20,
-      status: "shortage",
-      forecast: [12, 10, 8, 5, 2, 0, 0],
-      coordinates: [-122.4064, 37.7858],
-      address: "456 Union Square, San Francisco, CA",
-      predictedEmptyIn: "CRITICAL",
-    },
-    {
-      id: "D",
-      location: "Tech District",
-      charged: 18,
-      total: 20,
-      status: "ok",
-      forecast: [15, 18, 20, 18, 16, 14, 12],
-      coordinates: [-122.3871, 37.7849],
-      address: "789 Mission St, San Francisco, CA",
-      predictedEmptyIn: null,
-    }
-  ]);
+  const [stations, setStations] = useState(STATIONS.slice(0, 4)); // Use first 4 stations from centralized data
 
-  // AI-generated truck routes for rebalancing
-  const aiRoutes = [
-    {
-      id: "route1",
-      from: "D",
-      to: "C",
-      fromCoords: [-122.3871, 37.7849],
-      toCoords: [-122.4064, 37.7858],
-      batteries: 8,
-      eta: "15 min",
-      priority: "critical",
-      reason: "Station C is out of batteries",
-    },
-    {
-      id: "route2", 
-      from: "A",
-      to: "B",
-      fromCoords: [-122.4194, 37.7749],
-      toCoords: [-122.375, 37.6189],
-      batteries: 4,
-      eta: "22 min",
-      priority: "high",
-      reason: "Station B predicted shortage in 2.5h",
-    }
-  ];
+  // AI-generated truck routes for rebalancing from centralized data
+  const aiRoutes = AI_ROUTES;
 
-  // AI predictions and alerts
-  const aiAlerts = [
-    {
-      id: "alert1",
-      type: "shortage",
-      station: "C",
-      message: "Station C is out of batteries! Immediate action required.",
-      severity: "critical",
-      timeAgo: "2 min ago",
-    },
-    {
-      id: "alert2",
-      type: "prediction",
-      station: "B",
-      message: "Station B will run out in 2.5 hours based on demand patterns.",
-      severity: "warning",
-      timeAgo: "5 min ago",
-    },
-    {
-      id: "alert3",
-      type: "optimization",
-      station: "All",
-      message: "Route optimization complete. 2 truck routes suggested for efficiency.",
-      severity: "info",
-      timeAgo: "8 min ago",
-    }
-  ];
+  // AI predictions and alerts from centralized data
+  const aiAlerts = AI_ALERTS;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ok":
-        return "#10b981"; // emerald-500
-      case "at-risk":
-        return "#f59e0b"; // amber-500
-      case "shortage":
-        return "#ef4444"; // red-500
-      default:
-        return "#6b7280"; // gray-500
-    }
-  };
+  // Use centralized status color function
 
   const getStatusIcon = (status: string) => {
     switch (status) {

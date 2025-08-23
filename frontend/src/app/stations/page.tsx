@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "../page";
+import { STATIONS, type Station } from "@/data/stations";
 import {
   TbSearch,
   TbStar,
@@ -11,74 +12,17 @@ import {
   TbArrowRight,
 } from "react-icons/tb";
 
-interface Station {
-  id: number;
-  name: string;
-  location: string;
-  distance: string;
-  rating: number;
-  image: string;
-}
-
 export default function StationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock data for nearby stations
-  const stations: Station[] = [
-    {
-      id: 1,
-      name: "Supercharge Station",
-      location: "Westheimer Rd. Santa Ana, Illinois 85486",
-      distance: "4.2 km",
-      rating: 4.2,
-      image: "/battery-1.png",
-    },
-    {
-      id: 2,
-      name: "ElectroHub Charging",
-      location: "Main Street, Downtown District, CA 90210",
-      distance: "1.8 km",
-      rating: 4.7,
-      image: "/battery-1.png",
-    },
-    {
-      id: 3,
-      name: "Green Energy Station",
-      location: "Oak Avenue, Riverside Park, NY 10001",
-      distance: "6.5 km",
-      rating: 4.1,
-      image: "/battery-1.png",
-    },
-    {
-      id: 4,
-      name: "PowerPoint EV",
-      location: "Tech Boulevard, Innovation Center, TX 75001",
-      distance: "3.1 km",
-      rating: 4.5,
-      image: "/battery-1.png",
-    },
-    {
-      id: 5,
-      name: "EcoCharge Plus",
-      location: "Sunset Drive, Beachfront Plaza, FL 33101",
-      distance: "8.9 km",
-      rating: 4.3,
-      image: "/battery-1.png",
-    },
-    {
-      id: 6,
-      name: "VoltStation Express",
-      location: "Mountain View Road, Valley Center, WA 98001",
-      distance: "5.7 km",
-      rating: 4.6,
-      image: "/battery-1.png",
-    },
-  ];
+  // Get stations from centralized data
+  const stations: Station[] = STATIONS;
 
   const filteredStations = stations.filter(
     (station) =>
       station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      station.location.toLowerCase().includes(searchQuery.toLowerCase())
+      station.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (station.address && station.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -129,7 +73,9 @@ function StationCard({ station }: { station: Station }) {
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(`/stations/${station.id}`);
+    // Convert station.id (A, B, C, etc.) to numeric ID for URL
+    const numericId = station.id.charCodeAt(0) - 64;
+    router.push(`/stations/${numericId}`);
   };
 
   return (
@@ -142,14 +88,14 @@ function StationCard({ station }: { station: Station }) {
         {/* Left Side - Image with Rating */}
         <div className="relative flex-shrink-0">
           <img 
-            src={station.image} 
+            src={station.image || "/battery-1.png"} 
             alt={station.name}
             className="w-16 h-20 rounded-lg object-cover"
           />
           <div className="absolute -top-1 -left-1 bg-emerald-900 rounded-lg px-1.5 py-0.5 flex items-center space-x-1">
             <TbStar className="w-3 h-3 text-white flex-shrink-0" />
             <span className="text-white text-xs font-medium">
-              {station.rating}
+              {station.rating || 4.0}
             </span>
           </div>
         </div>
@@ -160,11 +106,11 @@ function StationCard({ station }: { station: Station }) {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <TbMapPin className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-              <span className="text-neutral-400 text-xs truncate">{station.location}</span>
+              <span className="text-neutral-400 text-xs truncate">{station.address || station.location}</span>
             </div>
             <div className="flex items-center space-x-2">
               <TbClock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-              <span className="text-neutral-400 text-xs">{station.distance}</span>
+              <span className="text-neutral-400 text-xs">{station.distance || "N/A"}</span>
             </div>
           </div>
         </div>
