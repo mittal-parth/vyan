@@ -9,10 +9,11 @@ import Map, {
 } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { STATIONS, getStatusColor, type Station } from "@/data/stations";
+import { MapPin } from "@/components/MapPin";
+import { StationPopup } from "@/components/StationPopup";
 import {
   TbBatteryFilled,
   TbMapPin,
-  TbStar,
   TbTemperature,
   TbCloud,
   TbMenu2,
@@ -24,15 +25,24 @@ import {
 
 export default function MobileDashboard() {
   const [viewState, setViewState] = useState({
-    longitude: -122.4194,
-    latitude: 37.7749,
+    longitude: 77.5959,
+    latitude: 12.9762,
     zoom: 11,
   });
+  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
 
   // Get stations from centralized data
   const stations: Station[] = STATIONS.slice(0, 4); // Use first 4 stations
 
   // Use centralized status color function
+
+  const onMarkerClick = (station: Station) => {
+    setSelectedStation(station);
+  };
+
+  const onMapClick = () => {
+    setSelectedStation(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-custom-bg-light to-custom-bg-dark">
@@ -52,6 +62,9 @@ export default function MobileDashboard() {
           setViewState={setViewState}
           stations={stations}
           getStatusColor={getStatusColor}
+          selectedStation={selectedStation}
+          onMarkerClick={onMarkerClick}
+          onMapClick={onMapClick}
         />
       </div>
     </div>
@@ -142,12 +155,18 @@ function MapSection({
   viewState, 
   setViewState, 
   stations, 
-  getStatusColor 
+  getStatusColor,
+  selectedStation,
+  onMarkerClick,
+  onMapClick
 }: {
   viewState: any;
   setViewState: (state: any) => void;
   stations: Station[];
   getStatusColor: (status: string) => string;
+  selectedStation: Station | null;
+  onMarkerClick: (station: Station) => void;
+  onMapClick: () => void;
 }) {
   return (
     <div className="px-6">
@@ -156,13 +175,12 @@ function MapSection({
           <Map
             {...viewState}
             onMove={(evt) => setViewState(evt.viewState)}
+            onClick={onMapClick}
             mapStyle="mapbox://styles/mapbox/dark-v11"
             mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
             style={{ width: "100%", height: "100%" }}
           >
             {/* Map Controls */}
-            <NavigationControl position="top-left" />
-            <FullscreenControl position="top-right" />
             <GeolocateControl
               position="top-right"
               trackUserLocation={true}
@@ -176,26 +194,30 @@ function MapSection({
                 longitude={station.coordinates[0]}
                 latitude={station.coordinates[1]}
                 anchor="bottom"
+                onClick={(e) => {
+                  e.originalEvent.stopPropagation();
+                  onMarkerClick(station);
+                }}
               >
-                <div className="relative">
-                  {/* Custom Pin */}
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg border-2 border-white"
-                    style={{ backgroundColor: getStatusColor(station.status) }}
-                  >
-                    {station.id}
-                  </div>
-                  
-                  {/* Status indicator */}
-                  {station.status === "shortage" && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  )}
-                  {station.status === "at-risk" && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                  )}
-                </div>
+                <MapPin 
+                  station={station}
+                  getStatusColor={getStatusColor}
+                  showStatusColors={false}
+                />
               </Marker>
             ))}
+
+            {/* Station Popup */}
+            {selectedStation && (
+              <StationPopup
+                station={selectedStation}
+                getStatusColor={getStatusColor}
+                onClose={onMapClick}
+                showRating={true}
+                showAIWarnings={false}
+                enableNavigation={true}
+              />
+            )}
           </Map>
         </div>
       </div>

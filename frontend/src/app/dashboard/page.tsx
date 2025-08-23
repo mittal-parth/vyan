@@ -12,6 +12,8 @@ import Map, {
 } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { STATIONS, AI_ROUTES, AI_ALERTS, getStatusColor, type Station, type AIRoute, type AIAlert } from "@/data/stations";
+import { MapPin } from "@/components/MapPin";
+import { StationPopup } from "@/components/StationPopup";
 import {
   TbBatteryFilled,
   TbMap,
@@ -260,8 +262,8 @@ function StationsView() {
   const [truckPositions, setTruckPositions] = useState<{[key: string]: number}>({});
   const [toasts, setToasts] = useState<{id: string, message: string, type: string}[]>([]);
   const [viewState, setViewState] = useState({
-    longitude: -122.4194,
-    latitude: 37.7749,
+    longitude: 77.5959,
+    latitude: 12.9762,
     zoom: 10,
   });
 
@@ -505,8 +507,6 @@ function StationsView() {
                 style={{ width: "100%", height: "100%" }}
               >
                 {/* Map Controls */}
-                <NavigationControl position="top-left" />
-                <FullscreenControl position="top-right" />
                 <GeolocateControl
                   position="top-right"
                   trackUserLocation={true}
@@ -568,42 +568,11 @@ function StationsView() {
                       onMarkerClick(station);
                     }}
                   >
-                    <div className="relative">
-                      {/* SVG Pin */}
-                      <svg 
-                        height="32" 
-                        width="24" 
-                        viewBox="0 0 24 24" 
-                        className="cursor-pointer transform hover:scale-110 transition-transform duration-200 drop-shadow-lg"
-                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
-                      >
-                        <path 
-                          d="M20.2,15.7L20.2,15.7c1.1-1.6,1.8-3.6,1.8-5.7c0-5.6-4.5-10-10-10S2,4.5,2,10c0,2,0.6,3.9,1.6,5.4c0,0.1,0.1,0.2,0.2,0.3c0,0,0.1,0.1,0.1,0.2c0.2,0.3,0.4,0.6,0.7,0.9c2.6,3.1,7.4,7.6,7.4,7.6s4.8-4.5,7.4-7.5c0.2-0.3,0.5-0.6,0.7-0.9C20.1,15.8,20.2,15.8,20.2,15.7z"
-                          fill={getStatusColor(station.status)}
-                          stroke="#ffffff"
-                          strokeWidth="1"
-                        />
-                      </svg>
-                      
-                      {/* Station ID Label */}
-                      <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
-                        <span className="text-white text-xs font-bold drop-shadow-sm">
-                          {station.id}
-                        </span>
-                      </div>
-
-                      {/* Prediction Badge */}
-                      {station.predictedEmptyIn && station.predictedEmptyIn !== "CRITICAL" && (
-                        <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded-full font-bold animate-pulse">
-                          !
-                        </div>
-                      )}
-                      {station.predictedEmptyIn === "CRITICAL" && (
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full font-bold animate-pulse">
-                          ⚠
-                        </div>
-                      )}
-                    </div>
+                    <MapPin 
+                      station={station}
+                      getStatusColor={getStatusColor}
+                      onClick={onMarkerClick}
+                    />
                   </Marker>
                 ))}
 
@@ -633,90 +602,13 @@ function StationsView() {
 
                 {/* Enhanced Station Popup */}
                 {selectedStation && (
-                  <Popup
-                    longitude={selectedStation.coordinates[0]}
-                    latitude={selectedStation.coordinates[1]}
-                    anchor="top"
-                    offset={[0, 10]}
+                  <StationPopup
+                    station={selectedStation}
+                    getStatusColor={getStatusColor}
                     onClose={() => setSelectedStation(null)}
-                    closeButton={true}
-                    closeOnClick={false}
-                    className="custom-popup"
-                  >
-                    <div className="p-3 min-w-48">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          Station {selectedStation.id}
-                        </h4>
-                        {getStatusIcon(selectedStation.status)}
-                      </div>
-                      <p className="text-gray-700 text-sm mb-2">
-                        {selectedStation.location}
-                      </p>
-                      <p className="text-gray-600 text-xs mb-3">
-                        {selectedStation.address}
-                      </p>
-
-                      {/* AI Prediction */}
-                      {selectedStation.predictedEmptyIn && (
-                        <div className={`mb-3 p-2 rounded-lg ${
-                          selectedStation.predictedEmptyIn === "CRITICAL" 
-                            ? "bg-red-100 border border-red-300" 
-                            : "bg-yellow-100 border border-yellow-300"
-                        }`}>
-                          <div className="flex items-center space-x-1">
-                            <TbRobot className="w-3 h-3 text-gray-600" />
-                            <span className="text-xs font-medium text-gray-800">
-                              AI Prediction:
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-700 mt-1">
-                            {selectedStation.predictedEmptyIn === "CRITICAL" 
-                              ? "Station is out of batteries!"
-                              : `Empty in ${selectedStation.predictedEmptyIn}`
-                            }
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-gray-600 text-xs">
-                            Battery Stock
-                          </span>
-                          <span className="text-gray-900 text-sm font-medium">
-                            {selectedStation.charged}/{selectedStation.total}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${
-                                (selectedStation.charged /
-                                  selectedStation.total) *
-                                100
-                              }%`,
-                              backgroundColor: getStatusColor(
-                                selectedStation.status
-                              ),
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <TbChartLine className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-600">
-                          {selectedStation.status === "ok"
-                            ? "Optimal"
-                            : selectedStation.status === "at-risk"
-                            ? "At Risk"
-                            : "Critical"}
-                        </span>
-                      </div>
-                    </div>
-                  </Popup>
+                    showRating={false}
+                    showAIWarnings={true}
+                  />
                 )}
               </Map>
             </div>
