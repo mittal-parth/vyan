@@ -335,6 +335,10 @@ function StationsView() {
     setSelectedStation(station);
   }, []);
 
+  const onMapClick = useCallback(() => {
+    setSelectedStation(null);
+  }, []);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Panel - Station List */}
@@ -364,6 +368,7 @@ function StationsView() {
             <Map
               {...viewState}
               onMove={(evt) => setViewState(evt.viewState)}
+              onClick={onMapClick}
               mapStyle="mapbox://styles/mapbox/dark-v11"
               mapboxAccessToken={
                 process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""
@@ -391,12 +396,26 @@ function StationsView() {
                     onMarkerClick(station);
                   }}
                 >
-                  <div
-                    className="w-8 h-8 rounded-full border-2 border-white shadow-lg cursor-pointer transform hover:scale-110 transition-transform duration-200"
-                    style={{ backgroundColor: getStatusColor(station.status) }}
-                  >
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">
+                  <div className="relative">
+                    {/* SVG Pin */}
+                    <svg 
+                      height="32" 
+                      width="24" 
+                      viewBox="0 0 24 24" 
+                      className="cursor-pointer transform hover:scale-110 transition-transform duration-200 drop-shadow-lg"
+                      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                    >
+                      <path 
+                        d="M20.2,15.7L20.2,15.7c1.1-1.6,1.8-3.6,1.8-5.7c0-5.6-4.5-10-10-10S2,4.5,2,10c0,2,0.6,3.9,1.6,5.4c0,0.1,0.1,0.2,0.2,0.3c0,0,0.1,0.1,0.1,0.2c0.2,0.3,0.4,0.6,0.7,0.9c2.6,3.1,7.4,7.6,7.4,7.6s4.8-4.5,7.4-7.5c0.2-0.3,0.5-0.6,0.7-0.9C20.1,15.8,20.2,15.8,20.2,15.7z"
+                        fill={getStatusColor(station.status)}
+                        stroke="#ffffff"
+                        strokeWidth="1"
+                      />
+                    </svg>
+                    
+                    {/* Station ID Label */}
+                    <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                      <span className="text-white text-xs font-bold drop-shadow-sm">
                         {station.id}
                       </span>
                     </div>
@@ -409,7 +428,8 @@ function StationsView() {
                 <Popup
                   longitude={selectedStation.coordinates[0]}
                   latitude={selectedStation.coordinates[1]}
-                  anchor="bottom"
+                  anchor="top"
+                  offset={[0, 10]}
                   onClose={() => setSelectedStation(null)}
                   closeButton={true}
                   closeOnClick={false}
