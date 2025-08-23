@@ -31,11 +31,12 @@ import {
   TbDashboard,
   TbTrendingUp,
   TbUsers,
+  TbArrowRight,
 } from "react-icons/tb";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<
-    "stations" | "ai-plan" | "tokens" | "settings"
+    "stations" | "tokens" | "settings"
   >("stations");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -61,7 +62,6 @@ export default function Dashboard() {
             />
             <StatsOverview />
             <MainContent activeTab={activeTab} />
-            <Footer />
           </div>
         </div>
       </div>
@@ -113,13 +113,12 @@ function Sidebar({
   setIsOpen,
 }: {
   activeTab: string;
-  setActiveTab: (tab: "stations" | "ai-plan" | "tokens" | "settings") => void;
+  setActiveTab: (tab: "stations" | "tokens" | "settings") => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }) {
   const tabs = [
     { id: "stations", label: "Stations", icon: TbDashboard },
-    { id: "ai-plan", label: "AI Plan", icon: TbRobot },
     { id: "tokens", label: "Tokens", icon: TbCoin },
     { id: "settings", label: "Settings", icon: TbSettings },
   ];
@@ -243,8 +242,6 @@ function MainContent({ activeTab }: { activeTab: string }) {
   switch (activeTab) {
     case "stations":
       return <StationsView />;
-    case "ai-plan":
-      return <AIPlanView />;
     case "tokens":
       return <TokensView />;
     case "settings":
@@ -256,13 +253,18 @@ function MainContent({ activeTab }: { activeTab: string }) {
 
 function StationsView() {
   const [selectedStation, setSelectedStation] = useState<any>(null);
+  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [dispatchedRoutes, setDispatchedRoutes] = useState<string[]>([]);
+  const [truckPositions, setTruckPositions] = useState<{[key: string]: number}>({});
+  const [toasts, setToasts] = useState<{id: string, message: string, type: string}[]>([]);
   const [viewState, setViewState] = useState({
     longitude: -122.4194,
     latitude: 37.7749,
     zoom: 10,
   });
 
-  const stations = [
+  const [stations, setStations] = useState([
     {
       id: "A",
       location: "Downtown Hub",
@@ -272,6 +274,7 @@ function StationsView() {
       forecast: [8, 12, 15, 12, 10, 8, 6],
       coordinates: [-122.4194, 37.7749],
       address: "123 Market St, San Francisco, CA",
+      predictedEmptyIn: null,
     },
     {
       id: "B",
@@ -282,6 +285,7 @@ function StationsView() {
       forecast: [10, 8, 6, 3, 2, 4, 6],
       coordinates: [-122.375, 37.6189],
       address: "SFO International Airport, San Francisco, CA",
+      predictedEmptyIn: "2.5 hours",
     },
     {
       id: "C",
@@ -292,6 +296,7 @@ function StationsView() {
       forecast: [12, 10, 8, 5, 2, 0, 0],
       coordinates: [-122.4064, 37.7858],
       address: "456 Union Square, San Francisco, CA",
+      predictedEmptyIn: "CRITICAL",
     },
     {
       id: "D",
@@ -302,6 +307,61 @@ function StationsView() {
       forecast: [15, 18, 20, 18, 16, 14, 12],
       coordinates: [-122.3871, 37.7849],
       address: "789 Mission St, San Francisco, CA",
+      predictedEmptyIn: null,
+    }
+  ]);
+
+  // AI-generated truck routes for rebalancing
+  const aiRoutes = [
+    {
+      id: "route1",
+      from: "D",
+      to: "C",
+      fromCoords: [-122.3871, 37.7849],
+      toCoords: [-122.4064, 37.7858],
+      batteries: 8,
+      eta: "15 min",
+      priority: "critical",
+      reason: "Station C is out of batteries",
+    },
+    {
+      id: "route2", 
+      from: "A",
+      to: "B",
+      fromCoords: [-122.4194, 37.7749],
+      toCoords: [-122.375, 37.6189],
+      batteries: 4,
+      eta: "22 min",
+      priority: "high",
+      reason: "Station B predicted shortage in 2.5h",
+    }
+  ];
+
+  // AI predictions and alerts
+  const aiAlerts = [
+    {
+      id: "alert1",
+      type: "shortage",
+      station: "C",
+      message: "Station C is out of batteries! Immediate action required.",
+      severity: "critical",
+      timeAgo: "2 min ago",
+    },
+    {
+      id: "alert2",
+      type: "prediction",
+      station: "B",
+      message: "Station B will run out in 2.5 hours based on demand patterns.",
+      severity: "warning",
+      timeAgo: "5 min ago",
+    },
+    {
+      id: "alert3",
+      type: "optimization",
+      station: "All",
+      message: "Route optimization complete. 2 truck routes suggested for efficiency.",
+      severity: "info",
+      timeAgo: "8 min ago",
     }
   ];
 
@@ -339,156 +399,647 @@ function StationsView() {
     setSelectedStation(null);
   }, []);
 
+  // Create route line data for the map - only show selected route
+  const routeLineData = {
+    type: "FeatureCollection" as const,
+    features: selectedRoute 
+      ? aiRoutes
+          .filter(route => route.id === selectedRoute)
+          .map(route => ({
+            type: "Feature" as const,
+            properties: {
+              id: route.id,
+              priority: route.priority,
+              from: route.from,
+              to: route.to,
+              batteries: route.batteries,
+              eta: route.eta,
+            },
+            geometry: {
+              type: "LineString" as const,
+              coordinates: [route.fromCoords, route.toCoords]
+            }
+          }))
+      : []
+  };
+
+  // Handle route card click
+  const handleRouteClick = (routeId: string) => {
+    setSelectedRoute(selectedRoute === routeId ? null : routeId);
+  };
+
+  // Handle dispatch click
+  const handleDispatch = (routeId: string) => {
+    setDispatchedRoutes(prev => [...prev, routeId]);
+    setTruckPositions(prev => ({...prev, [routeId]: 0}));
+    
+    // Animate truck along route
+    const animateTruck = () => {
+      const startTime = Date.now();
+      const duration = 15000; // 15 seconds animation for more realistic timing
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        setTruckPositions(prev => ({...prev, [routeId]: progress}));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Animation complete - update station batteries
+          updateStationBatteries(routeId);
+          showDeliveryToast(routeId);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    };
+    
+    animateTruck();
+  };
+
+  // Calculate truck position along route
+  const getTruckPosition = (route: any, progress: number) => {
+    const [startLng, startLat] = route.fromCoords;
+    const [endLng, endLat] = route.toCoords;
+    
+    const lng = startLng + (endLng - startLng) * progress;
+    const lat = startLat + (endLat - startLat) * progress;
+    
+    return [lng, lat];
+  };
+
+  // Update station battery counts and status
+  const updateStationBatteries = (routeId: string) => {
+    const route = aiRoutes.find(r => r.id === routeId);
+    if (!route) return;
+
+    setStations(prevStations => 
+      prevStations.map(station => {
+        if (station.id === route.from) {
+          // Subtract batteries from source station
+          const newCharged = Math.max(0, station.charged - route.batteries);
+          return {
+            ...station,
+            charged: newCharged,
+            status: getStationStatus(newCharged, station.total),
+            predictedEmptyIn: newCharged === 0 ? "CRITICAL" : 
+                            newCharged <= 3 ? "1.5 hours" : null
+          };
+        }
+        if (station.id === route.to) {
+          // Add batteries to destination station
+          const newCharged = Math.min(station.total, station.charged + route.batteries);
+          return {
+            ...station,
+            charged: newCharged,
+            status: getStationStatus(newCharged, station.total),
+            predictedEmptyIn: newCharged > 5 ? null : 
+                            newCharged === 0 ? "CRITICAL" : "3 hours"
+          };
+        }
+        return station;
+      })
+    );
+  };
+
+  // Determine station status based on battery count
+  const getStationStatus = (charged: number, total: number) => {
+    const percentage = (charged / total) * 100;
+    if (percentage === 0) return "shortage";
+    if (percentage <= 30) return "at-risk";
+    return "ok";
+  };
+
+  // Toast management functions
+  const showDeliveryToast = (routeId: string) => {
+    const route = aiRoutes.find(r => r.id === routeId);
+    if (!route) return;
+
+    const toastId = `toast-${Date.now()}`;
+    const toast = {
+      id: toastId,
+      message: `Delivery complete! ${route.batteries} batteries transferred from Station ${route.from} to Station ${route.to}`,
+      type: "success"
+    };
+
+    setToasts(prev => [...prev, toast]);
+
+    // Auto-remove toast after 4 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== toastId));
+    }, 4000);
+  };
+
+  const removeToast = (toastId: string) => {
+    setToasts(prev => prev.filter(t => t.id !== toastId));
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Panel - Station List */}
-      <div className="lg:col-span-1 space-y-4">
-        <h2 className="text-neutral-200 text-xl font-semibold">
-          Station Overview
-        </h2>
-        <div className="space-y-6">
-          {stations.map((station) => (
-            <StationCard
-              key={station.id}
-              station={station}
-              onClick={() => onMarkerClick(station)}
-              isSelected={selectedStation?.id === station.id}
+    <div className="space-y-6">
+      {/* AI Route Suggestions - Horizontal Layout */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-neutral-200 text-xl font-semibold flex items-center space-x-2">
+            <TbTruck className="w-6 h-6 text-emerald-400" />
+            <span>AI Suggested Routes</span>
+          </h2>
+          <div className="flex items-center space-x-4 text-sm text-neutral-400">
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-0.5 bg-yellow-400 rounded"></div>
+              <span>High Priority</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-0.5 bg-red-400 rounded"></div>
+              <span>Critical</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {aiRoutes.map((route) => (
+            <AIRouteCard 
+              key={route.id} 
+              route={route} 
+              isSelected={selectedRoute === route.id}
+              isDispatched={dispatchedRoutes.includes(route.id)}
+              onClick={() => handleRouteClick(route.id)}
+              onDispatch={() => handleDispatch(route.id)}
             />
           ))}
         </div>
       </div>
 
-      {/* Right Panel - Interactive Map */}
-      <div className="lg:col-span-2">
-        <h3 className="text-neutral-200 text-lg font-semibold mb-4">
-          Network Overview
-        </h3>
-        <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-6 h-screen">
-          <div className="h-full rounded-xl overflow-hidden">
-            <Map
-              {...viewState}
-              onMove={(evt) => setViewState(evt.viewState)}
-              onClick={onMapClick}
-              mapStyle="mapbox://styles/mapbox/dark-v11"
-              mapboxAccessToken={
-                process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""
-              }
-              style={{ width: "100%", height: "100%" }}
-            >
-              {/* Map Controls */}
-              <NavigationControl position="top-left" />
-              <FullscreenControl position="top-right" />
-              <GeolocateControl
-                position="top-right"
-                trackUserLocation={true}
-                showUserHeading={true}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Panel - Station List */}
+        <div className="lg:col-span-1 space-y-4">
+          <h2 className="text-neutral-200 text-xl font-semibold">
+            Station Overview
+          </h2>
+          <div className="space-y-4">
+            {stations.map((station) => (
+              <StationCard
+                key={station.id}
+                station={station}
+                onClick={() => onMarkerClick(station)}
+                isSelected={selectedStation?.id === station.id}
               />
+            ))}
+          </div>
+        </div>
 
-              {/* Station Markers */}
-              {stations.map((station) => (
-                <Marker
-                  key={station.id}
-                  longitude={station.coordinates[0]}
-                  latitude={station.coordinates[1]}
-                  anchor="bottom"
-                  onClick={(e) => {
-                    e.originalEvent.stopPropagation();
-                    onMarkerClick(station);
-                  }}
-                >
-                  <div className="relative">
-                    {/* SVG Pin */}
-                    <svg 
-                      height="32" 
-                      width="24" 
-                      viewBox="0 0 24 24" 
-                      className="cursor-pointer transform hover:scale-110 transition-transform duration-200 drop-shadow-lg"
-                      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+        {/* Right Panel - Interactive Map */}
+        <div className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-neutral-200 text-lg font-semibold">
+              Network Overview
+            </h3>
+          </div>
+          <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-6 h-screen">
+            <div className="h-full rounded-xl overflow-hidden">
+              <Map
+                {...viewState}
+                onMove={(evt) => setViewState(evt.viewState)}
+                onClick={onMapClick}
+                mapStyle="mapbox://styles/mapbox/dark-v11"
+                mapboxAccessToken={
+                  process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""
+                }
+                style={{ width: "100%", height: "100%" }}
+              >
+                {/* Map Controls */}
+                <NavigationControl position="top-left" />
+                <FullscreenControl position="top-right" />
+                <GeolocateControl
+                  position="top-right"
+                  trackUserLocation={true}
+                  showUserHeading={true}
+                />
+
+                {/* AI Route Lines */}
+                <Source id="ai-routes" type="geojson" data={routeLineData}>
+                  <Layer
+                    id="route-lines"
+                    type="line"
+                    paint={{
+                      'line-color': [
+                        'case',
+                        ['==', ['get', 'priority'], 'critical'], '#ef4444', // red for critical
+                        ['==', ['get', 'priority'], 'high'], '#f59e0b', // yellow for high
+                        '#6b7280' // gray for normal
+                      ],
+                      'line-width': 4,
+                      'line-opacity': 0.8,
+                    }}
+                    layout={{
+                      'line-cap': 'round',
+                      'line-join': 'round'
+                    }}
+                  />
+                  <Layer
+                    id="route-arrows"
+                    type="symbol"
+                    layout={{
+                      'symbol-placement': 'line',
+                      'symbol-spacing': 100,
+                      'icon-image': 'triangle-15',
+                      'icon-size': 1,
+                      'icon-rotation-alignment': 'map',
+                      'icon-allow-overlap': true,
+                    }}
+                    paint={{
+                      'icon-color': [
+                        'case',
+                        ['==', ['get', 'priority'], 'critical'], '#ef4444',
+                        ['==', ['get', 'priority'], 'high'], '#f59e0b',
+                        '#6b7280'
+                      ],
+                      'icon-opacity': 0.8,
+                    }}
+                  />
+                </Source>
+
+                {/* Station Markers */}
+                {stations.map((station) => (
+                  <Marker
+                    key={station.id}
+                    longitude={station.coordinates[0]}
+                    latitude={station.coordinates[1]}
+                    anchor="bottom"
+                    onClick={(e) => {
+                      e.originalEvent.stopPropagation();
+                      onMarkerClick(station);
+                    }}
+                  >
+                    <div className="relative">
+                      {/* SVG Pin */}
+                      <svg 
+                        height="32" 
+                        width="24" 
+                        viewBox="0 0 24 24" 
+                        className="cursor-pointer transform hover:scale-110 transition-transform duration-200 drop-shadow-lg"
+                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                      >
+                        <path 
+                          d="M20.2,15.7L20.2,15.7c1.1-1.6,1.8-3.6,1.8-5.7c0-5.6-4.5-10-10-10S2,4.5,2,10c0,2,0.6,3.9,1.6,5.4c0,0.1,0.1,0.2,0.2,0.3c0,0,0.1,0.1,0.1,0.2c0.2,0.3,0.4,0.6,0.7,0.9c2.6,3.1,7.4,7.6,7.4,7.6s4.8-4.5,7.4-7.5c0.2-0.3,0.5-0.6,0.7-0.9C20.1,15.8,20.2,15.8,20.2,15.7z"
+                          fill={getStatusColor(station.status)}
+                          stroke="#ffffff"
+                          strokeWidth="1"
+                        />
+                      </svg>
+                      
+                      {/* Station ID Label */}
+                      <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                        <span className="text-white text-xs font-bold drop-shadow-sm">
+                          {station.id}
+                        </span>
+                      </div>
+
+                      {/* Prediction Badge */}
+                      {station.predictedEmptyIn && station.predictedEmptyIn !== "CRITICAL" && (
+                        <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded-full font-bold animate-pulse">
+                          !
+                        </div>
+                      )}
+                      {station.predictedEmptyIn === "CRITICAL" && (
+                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full font-bold animate-pulse">
+                          ⚠
+                        </div>
+                      )}
+                    </div>
+                  </Marker>
+                ))}
+
+                {/* Animated Truck Markers */}
+                {Object.entries(truckPositions).map(([routeId, progress]) => {
+                  const route = aiRoutes.find(r => r.id === routeId);
+                  if (!route || progress >= 1) return null;
+                  
+                  const [lng, lat] = getTruckPosition(route, progress);
+                  
+                  return (
+                    <Marker
+                      key={`truck-${routeId}`}
+                      longitude={lng}
+                      latitude={lat}
+                      anchor="center"
                     >
-                      <path 
-                        d="M20.2,15.7L20.2,15.7c1.1-1.6,1.8-3.6,1.8-5.7c0-5.6-4.5-10-10-10S2,4.5,2,10c0,2,0.6,3.9,1.6,5.4c0,0.1,0.1,0.2,0.2,0.3c0,0,0.1,0.1,0.1,0.2c0.2,0.3,0.4,0.6,0.7,0.9c2.6,3.1,7.4,7.6,7.4,7.6s4.8-4.5,7.4-7.5c0.2-0.3,0.5-0.6,0.7-0.9C20.1,15.8,20.2,15.8,20.2,15.7z"
-                        fill={getStatusColor(station.status)}
-                        stroke="#ffffff"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                    
-                    {/* Station ID Label */}
-                    <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
-                      <span className="text-white text-xs font-bold drop-shadow-sm">
-                        {station.id}
-                      </span>
-                    </div>
-                  </div>
-                </Marker>
-              ))}
+                      <div className="relative">
+                        <TbTruck className="w-6 h-6 text-emerald-400 drop-shadow-lg animate-bounce" />
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+                        </div>
+                      </div>
+                    </Marker>
+                  );
+                })}
 
-              {/* Station Popup */}
-              {selectedStation && (
-                <Popup
-                  longitude={selectedStation.coordinates[0]}
-                  latitude={selectedStation.coordinates[1]}
-                  anchor="top"
-                  offset={[0, 10]}
-                  onClose={() => setSelectedStation(null)}
-                  closeButton={true}
-                  closeOnClick={false}
-                  className="custom-popup"
-                >
-                  <div className="p-3 min-w-48">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900">
-                        Station {selectedStation.id}
-                      </h4>
-                      {getStatusIcon(selectedStation.status)}
-                    </div>
-                    <p className="text-gray-700 text-sm mb-2">
-                      {selectedStation.location}
-                    </p>
-                    <p className="text-gray-600 text-xs mb-3">
-                      {selectedStation.address}
-                    </p>
+                {/* Enhanced Station Popup */}
+                {selectedStation && (
+                  <Popup
+                    longitude={selectedStation.coordinates[0]}
+                    latitude={selectedStation.coordinates[1]}
+                    anchor="top"
+                    offset={[0, 10]}
+                    onClose={() => setSelectedStation(null)}
+                    closeButton={true}
+                    closeOnClick={false}
+                    className="custom-popup"
+                  >
+                    <div className="p-3 min-w-48">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-900">
+                          Station {selectedStation.id}
+                        </h4>
+                        {getStatusIcon(selectedStation.status)}
+                      </div>
+                      <p className="text-gray-700 text-sm mb-2">
+                        {selectedStation.location}
+                      </p>
+                      <p className="text-gray-600 text-xs mb-3">
+                        {selectedStation.address}
+                      </p>
 
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-gray-600 text-xs">
-                          Battery Stock
-                        </span>
-                        <span className="text-gray-900 text-sm font-medium">
-                          {selectedStation.charged}/{selectedStation.total}
+                      {/* AI Prediction */}
+                      {selectedStation.predictedEmptyIn && (
+                        <div className={`mb-3 p-2 rounded-lg ${
+                          selectedStation.predictedEmptyIn === "CRITICAL" 
+                            ? "bg-red-100 border border-red-300" 
+                            : "bg-yellow-100 border border-yellow-300"
+                        }`}>
+                          <div className="flex items-center space-x-1">
+                            <TbRobot className="w-3 h-3 text-gray-600" />
+                            <span className="text-xs font-medium text-gray-800">
+                              AI Prediction:
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-700 mt-1">
+                            {selectedStation.predictedEmptyIn === "CRITICAL" 
+                              ? "Station is out of batteries!"
+                              : `Empty in ${selectedStation.predictedEmptyIn}`
+                            }
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-600 text-xs">
+                            Battery Stock
+                          </span>
+                          <span className="text-gray-900 text-sm font-medium">
+                            {selectedStation.charged}/{selectedStation.total}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${
+                                (selectedStation.charged /
+                                  selectedStation.total) *
+                                100
+                              }%`,
+                              backgroundColor: getStatusColor(
+                                selectedStation.status
+                              ),
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <TbChartLine className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs font-medium text-gray-600">
+                          {selectedStation.status === "ok"
+                            ? "Optimal"
+                            : selectedStation.status === "at-risk"
+                            ? "At Risk"
+                            : "Critical"}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all duration-300"
-                          style={{
-                            width: `${
-                              (selectedStation.charged /
-                                selectedStation.total) *
-                              100
-                            }%`,
-                            backgroundColor: getStatusColor(
-                              selectedStation.status
-                            ),
-                          }}
-                        ></div>
-                      </div>
                     </div>
+                  </Popup>
+                )}
+              </Map>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                    <div className="flex items-center space-x-2">
-                      <TbChartLine className="w-4 h-4 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-600">
-                        {selectedStation.status === "ok"
-                          ? "Optimal"
-                          : selectedStation.status === "at-risk"
-                          ? "At Risk"
-                          : "Critical"}
-                      </span>
-                    </div>
-                  </div>
-                </Popup>
-              )}
-            </Map>
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </div>
+  );
+}
+
+// AI Alert Component
+function AIAlert({ alert }: { alert: any }) {
+  const getSeverityStyles = (severity: string) => {
+    switch (severity) {
+      case "critical":
+        return "bg-red-900/20 border-red-500/30 text-red-400";
+      case "warning":
+        return "bg-yellow-900/20 border-yellow-500/30 text-yellow-400";
+      case "info":
+        return "bg-blue-900/20 border-blue-500/30 text-blue-400";
+      default:
+        return "bg-neutral-800/20 border-neutral-500/30 text-neutral-400";
+    }
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case "critical":
+        return <TbAlertTriangle className="w-4 h-4" />;
+      case "warning":
+        return <TbAlertTriangle className="w-4 h-4" />;
+      case "info":
+        return <TbRobot className="w-4 h-4" />;
+      default:
+        return <TbRobot className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className={`border rounded-lg p-3 ${getSeverityStyles(alert.severity)}`}>
+      <div className="flex items-start space-x-2">
+        <div className="flex-shrink-0 mt-0.5">
+          {getSeverityIcon(alert.severity)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium">Station {alert.station}</span>
+            <span className="text-xs opacity-75">{alert.timeAgo}</span>
+          </div>
+          <p className="text-xs opacity-90 leading-relaxed">{alert.message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// AI Route Card Component - Horizontal Layout
+function AIRouteCard({ 
+  route, 
+  isSelected, 
+  isDispatched, 
+  onClick, 
+  onDispatch 
+}: { 
+  route: any; 
+  isSelected: boolean; 
+  isDispatched: boolean; 
+  onClick: () => void; 
+  onDispatch: () => void; 
+}) {
+  const getPriorityStyles = (priority: string) => {
+    switch (priority) {
+      case "critical":
+        return "border-red-500/30 bg-red-900/10";
+      case "high":
+        return "border-yellow-500/30 bg-yellow-900/10";
+      default:
+        return "border-neutral-500/30 bg-neutral-800/10";
+    }
+  };
+
+  return (
+    <div 
+      className={`border rounded-xl p-4 transition-all duration-200 cursor-pointer ${
+        getPriorityStyles(route.priority)
+      } ${
+        isSelected 
+          ? "ring-2 ring-emerald-500/50 bg-emerald-600/10 shadow-neuro-dark-pressed" 
+          : "bg-custom-bg-shadow-dark shadow-neuro-dark-deep hover:shadow-neuro-dark-pressed"
+      }`}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between">
+        {/* Left Section - Route Info */}
+        <div className="flex items-center space-x-4 flex-1">
+          {/* Priority Badge */}
+          <div className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium ${
+            route.priority === "critical" 
+              ? "bg-red-500/20 text-red-400" 
+              : route.priority === "high"
+              ? "bg-yellow-500/20 text-yellow-400"
+              : "bg-neutral-500/20 text-neutral-400"
+          }`}>
+            {route.priority.toUpperCase()}
+          </div>
+          
+          {/* Route Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3 mb-1">
+              <div className="flex items-center space-x-2 text-neutral-200 font-medium">
+                <span className="bg-neutral-700 text-neutral-200 px-2 py-1 rounded text-sm">
+                  {route.from}
+                </span>
+                <TbArrowRight className="w-4 h-4 text-emerald-400" />
+                <span className="bg-neutral-700 text-neutral-200 px-2 py-1 rounded text-sm">
+                  {route.to}
+                </span>
+              </div>
+              <div className="text-neutral-400 text-sm">
+                {route.batteries} batteries
+              </div>
+            </div>
+            <p className="text-xs text-neutral-500 italic truncate">{route.reason}</p>
+          </div>
+        </div>
+
+        {/* Right Section - ETA & Action */}
+        <div className="flex items-center space-x-4 flex-shrink-0">
+          
+          <div className="text-right">
+            <div className="text-neutral-300 text-sm font-medium">ETA</div>
+            <div className="text-neutral-400 text-xs">{route.eta}</div>
+          </div>
+          
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDispatch();
+            }}
+            disabled={isDispatched}
+            className={`rounded-lg py-2 px-4 text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+              isDispatched
+                ? "bg-green-600/20 border border-green-500/30 text-green-400 cursor-not-allowed"
+                : "bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400"
+            }`}
+          >
+            {isDispatched ? (
+              <>
+                <TbCheck className="w-4 h-4" />
+                <span>Dispatched</span>
+              </>
+            ) : (
+              <>
+                <TbTruck className="w-4 h-4" />
+                <span>Dispatch</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Toast Container Component
+function ToastContainer({ 
+  toasts, 
+  onRemove 
+}: { 
+  toasts: {id: string, message: string, type: string}[]; 
+  onRemove: (id: string) => void; 
+}) {
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-3">
+      {toasts.map((toast) => (
+        <Toast key={toast.id} toast={toast} onRemove={onRemove} />
+      ))}
+    </div>
+  );
+}
+
+// Individual Toast Component
+function Toast({ 
+  toast, 
+  onRemove 
+}: { 
+  toast: {id: string, message: string, type: string}; 
+  onRemove: (id: string) => void; 
+}) {
+  return (
+    <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-xl p-4 max-w-sm border border-emerald-500/30 transform transition-all duration-300 ease-out animate-pulse">
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-emerald-600/20 flex items-center justify-center">
+            <TbCheck className="w-5 h-5 text-emerald-400" />
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-emerald-400 text-sm font-medium mb-1">
+                Delivery Complete!
+              </p>
+              <p className="text-neutral-300 text-xs leading-relaxed">
+                {toast.message}
+              </p>
+            </div>
+            
+            <button
+              onClick={() => onRemove(toast.id)}
+              className="ml-2 text-neutral-400 hover:text-neutral-200 transition-colors"
+            >
+              <TbX className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -542,13 +1093,44 @@ function StationCard({
     >
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h4 className="text-neutral-200 font-semibold">
-            Station {station.id}
+          <h4 className="text-neutral-200 font-semibold flex items-center space-x-2">
+            <span>Station {station.id}</span>
+            {station.predictedEmptyIn && (
+              <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                station.predictedEmptyIn === "CRITICAL" 
+                  ? "bg-red-500/20 text-red-400 animate-pulse" 
+                  : "bg-yellow-500/20 text-yellow-400"
+              }`}>
+                {station.predictedEmptyIn === "CRITICAL" ? "⚠ EMPTY" : "⚠"}
+              </div>
+            )}
           </h4>
           <p className="text-neutral-400 text-sm">{station.location}</p>
         </div>
         {getStatusIcon(station.status)}
       </div>
+
+      {/* AI Prediction */}
+      {station.predictedEmptyIn && (
+        <div className={`mb-3 p-2 rounded-lg border ${
+          station.predictedEmptyIn === "CRITICAL" 
+            ? "bg-red-900/20 border-red-500/30" 
+            : "bg-yellow-900/20 border-yellow-500/30"
+        }`}>
+          <div className="flex items-center space-x-1">
+            <TbRobot className="w-3 h-3 text-neutral-400" />
+            <span className="text-xs font-medium text-neutral-300">
+              AI Prediction:
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            {station.predictedEmptyIn === "CRITICAL" 
+              ? "Station is out of batteries!"
+              : `Empty in ${station.predictedEmptyIn}`
+            }
+          </p>
+        </div>
+      )}
 
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
@@ -587,97 +1169,7 @@ function StationCard({
   );
 }
 
-function AIPlanView() {
-  const suggestedMoves = [
-    {
-      from: "Station A",
-      to: "Station C",
-      batteries: 3,
-      eta: "22m",
-      priority: "high",
-    },
-    {
-      from: "Station D",
-      to: "Station B",
-      batteries: 2,
-      eta: "35m",
-      priority: "medium",
-    },
-    {
-      from: "Station A",
-      to: "Station F",
-      batteries: 4,
-      eta: "18m",
-      priority: "high",
-    },
-  ];
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Map View */}
-      <div className="lg:col-span-2">
-        <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-6 h-96">
-          <h3 className="text-neutral-200 text-lg font-semibold mb-4">
-            Optimized Route Plan
-          </h3>
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <TbTruck className="w-24 h-24 text-emerald-400 mx-auto mb-4" />
-              <p className="text-neutral-400">AI-generated delivery routes</p>
-              <p className="text-neutral-500 text-sm">
-                Optimized for efficiency and demand
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Suggested Moves Panel */}
-      <div className="lg:col-span-1 space-y-4">
-        <h2 className="text-neutral-200 text-xl font-semibold">
-          Suggested Moves
-        </h2>
-        <div className="space-y-3">
-          {suggestedMoves.map((move, index) => (
-            <div
-              key={index}
-              className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-xl p-4 hover:shadow-neuro-dark-pressed transition-all duration-200"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    move.priority === "high"
-                      ? "bg-red-500/20 text-red-400"
-                      : "bg-yellow-500/20 text-yellow-400"
-                  }`}
-                >
-                  {move.priority.toUpperCase()}
-                </span>
-                <span className="text-neutral-400 text-sm">ETA {move.eta}</span>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-neutral-200 font-medium">
-                  Move {move.batteries} batteries
-                </p>
-                <div className="flex items-center space-x-2 text-sm text-neutral-400">
-                  <span>{move.from}</span>
-                  <span>→</span>
-                  <span>{move.to}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <button className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-neuro-dark-outset hover:shadow-neuro-dark-pressed rounded-xl py-3 px-4 text-white font-medium transition-all duration-200 flex items-center justify-center space-x-2">
-          <TbCheck className="w-5 h-5" />
-          <span>Apply Plan</span>
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function TokensView() {
   const topUsers = [
@@ -802,25 +1294,6 @@ function SettingsView() {
             </select>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Footer() {
-  return (
-    <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <TbRobot className="w-5 h-5 text-emerald-400" />
-          <span className="text-neutral-400 text-sm">
-            Last AI plan generated at 12:05 PM
-          </span>
-        </div>
-
-        <button className="bg-emerald-600 hover:bg-emerald-700 shadow-neuro-dark-outset hover:shadow-neuro-dark-pressed rounded-lg py-2 px-4 text-white font-medium transition-all duration-200 text-sm">
-          Apply Plan
-        </button>
       </div>
     </div>
   );
