@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/app/page";
+import { Header } from "@/components/Header";
 import { getStationByNumericId, type Station } from "@/data/stations";
 import { TbBattery, TbBolt, TbCoin, TbWallet, TbArrowRight, TbArrowLeft } from "react-icons/tb";
 
@@ -142,23 +142,13 @@ export default function StationDetailPage({ params }: { params: { id: string } }
   }, []);
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen">
       <div className="max-w-sm mx-auto space-y-8">
         <Header />
         
-        {/* Back Button */}
-        <div className="pt-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center space-x-2 text-neutral-400 hover:text-neutral-200 transition-colors duration-200"
-          >
-            <TbArrowLeft className="w-5 h-5" />
-            <span className="text-sm">Back to stations</span>
-          </button>
-        </div>
-        
+        <div className="px-6">
         {/* Station Name */}
-        <div className="text-center pt-6">
+        <div className="text-center pb-8">
           <h1 className="text-neutral-200 text-2xl">{station.name}</h1>
           <p className="text-neutral-400 text-sm mt-2">{station.address || station.location}</p>
         </div>
@@ -211,6 +201,7 @@ export default function StationDetailPage({ params }: { params: { id: string } }
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

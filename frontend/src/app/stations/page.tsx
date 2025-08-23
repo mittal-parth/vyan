@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Header } from "../page";
+import { Header } from "@/components/Header";
 import { STATIONS, type Station } from "@/data/stations";
 import {
   TbSearch,
