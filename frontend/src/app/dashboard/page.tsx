@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Map, {
   Marker,
-  Popup,
-  NavigationControl,
-  FullscreenControl,
   GeolocateControl,
   Source,
   Layer,
@@ -14,6 +11,9 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { STATIONS, AI_ROUTES, AI_ALERTS, getStatusColor, type Station, type AIRoute, type AIAlert } from "@/data/stations";
 import { MapPin } from "@/components/MapPin";
 import { StationPopup } from "@/components/StationPopup";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { useActiveAccount } from "thirdweb/react";
+import { useOperatorStations } from "@/hooks/useOperatorStations";
 import {
   TbBatteryFilled,
   TbMap,
@@ -35,6 +35,8 @@ import {
   TbTrendingUp,
   TbUsers,
   TbArrowRight,
+  TbLoader2,
+  TbUser,
 } from "react-icons/tb";
 
 export default function Dashboard() {
@@ -72,42 +74,7 @@ export default function Dashboard() {
   );
 }
 
-function DashboardHeader({
-  setSidebarOpen,
-  sidebarOpen,
-}: {
-  setSidebarOpen: (open: boolean) => void;
-  sidebarOpen: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden w-10 h-10 rounded-xl bg-custom-bg-light shadow-neuro-dark-outset flex items-center justify-center hover:shadow-neuro-dark-pressed transition-all duration-200"
-        >
-          {sidebarOpen ? (
-            <TbX className="w-5 h-5 text-neutral-400" />
-          ) : (
-            <TbMenu2 className="w-5 h-5 text-neutral-400" />
-          )}
-        </button>
-        <div>
-          <h1 className="text-neutral-200 text-2xl font-bold">
-            Station Dashboard
-          </h1>
-          <p className="text-neutral-400 text-sm">
-            Manage your EV battery swap network
-          </p>
-        </div>
-      </div>
 
-      <button className="w-12 h-12 rounded-2xl bg-custom-bg-light shadow-neuro-dark-outset flex items-center justify-center hover:shadow-neuro-dark-pressed transition-all duration-200">
-        <div className="w-7 h-7 rounded-full bg-custom-bg-light shadow-neuro-dark-inset"></div>
-      </button>
-    </div>
-  );
-}
 
 function Sidebar({
   activeTab,
@@ -267,7 +234,27 @@ function StationsView() {
     zoom: 10,
   });
 
-  const [stations, setStations] = useState(STATIONS.slice(0, 4)); // Use first 4 stations from centralized data
+  // Get connected wallet account
+  const account = useActiveAccount();
+  
+  // Fetch operator stations from contract
+  const { stations: contractStations, loading: stationsLoading, error: stationsError, refetchStations } = useOperatorStations(account?.address);
+  
+  // Fallback to static data if no contract data or not connected
+  const [stations, setStations] = useState<Station[]>([]);
+  
+  // Update stations when contract data changes
+  useEffect(() => {
+    if (contractStations && contractStations.length > 0) {
+      setStations(contractStations);
+    } else if (account?.address) {
+      // If wallet is connected but no stations, show empty array
+      setStations([]);
+    } else {
+      // If no wallet connected, also show empty array
+      setStations([]);
+    }
+  }, [contractStations, account?.address]);
 
   // AI-generated truck routes for rebalancing from centralized data
   const aiRoutes = AI_ROUTES;
@@ -434,6 +421,82 @@ function StationsView() {
   const removeToast = (toastId: string) => {
     setToasts(prev => prev.filter(t => t.id !== toastId));
   };
+
+  // Show wallet connection prompt if no wallet connected
+  if (!account) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <TbUser className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+            <h3 className="text-neutral-200 text-lg font-semibold mb-2">Connect Your Wallet</h3>
+            <p className="text-neutral-400 mb-4">Please connect your wallet to view and manage your stations</p>
+            <p className="text-neutral-500 text-sm">Use the connect button in the top-right corner</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (stationsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <TbLoader2 className="w-8 h-8 text-neutral-400 animate-spin mx-auto mb-4" />
+            <p className="text-neutral-400">Loading your stations...</p>
+            <p className="text-neutral-500 text-sm mt-2">Connected: {account.address?.slice(0, 6)}...{account.address?.slice(-4)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state with retry option
+  if (stationsError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <TbAlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+            <p className="text-neutral-400 mb-2">Failed to load stations from contract</p>
+            <p className="text-neutral-500 text-sm mb-4">{stationsError}</p>
+            <button
+              onClick={refetchStations}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 mx-auto"
+            >
+              <TbSettings className="w-4 h-4" />
+              <span>Retry Loading</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message when no stations found
+  if (stations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <TbMap className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+            <h3 className="text-neutral-200 text-lg font-semibold mb-2">No Stations Found</h3>
+            <p className="text-neutral-400 mb-4">You don't have any registered stations yet</p>
+            <p className="text-neutral-500 text-sm mb-4">Connected: {account.address?.slice(0, 6)}...{account.address?.slice(-4)}</p>
+            <button
+              onClick={refetchStations}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 mx-auto"
+            >
+              <TbSettings className="w-4 h-4" />
+              <span>Reload Stations</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

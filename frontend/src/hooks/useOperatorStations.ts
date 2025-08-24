@@ -4,22 +4,21 @@ import { contract } from "@/app/client";
 import { Station } from "@/data/stations";
 import { transformContractStation, ContractStation } from "@/utils/contractTransform";
 
-export const useStations = () => {
+export const useOperatorStations = (operatorAddress?: string) => {
   const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStations = async () => {
+  const fetchOperatorStations = async (operator: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Call the getAllStations function from the smart contract
-      // Simple method name works if contract ABI is available
+      // Call the getOperatorStations function from the smart contract
       const contractStations = await readContract({
         contract,
-        method: "function getAllStations() view returns ((string id, string name, string location, int256 latitude, int256 longitude, address operator, uint256 totalSlots, uint256 availableSlots, uint256[] batteries, bool isActive, uint256 createdAt, uint256 baseFee, uint16 rating)[])",
-        params: []
+        method: "function getOperatorStations(address operator) view returns ((string id, string name, string location, int256 latitude, int256 longitude, address operator, uint256 totalSlots, uint256 availableSlots, uint256[] batteries, bool isActive, uint256 createdAt, uint256 baseFee, uint16 rating)[])",
+        params: [operator]
       }) as ContractStation[];
 
       // Transform contract data to frontend format
@@ -29,10 +28,10 @@ export const useStations = () => {
 
       setStations(transformedStations);
     } catch (err) {
-      console.error("Error fetching stations:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch stations");
+      console.error("Error fetching operator stations:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch operator stations");
       
-      // Fallback to empty array or you could import and use STATIONS as fallback
+      // Fallback to empty array
       setStations([]);
     } finally {
       setLoading(false);
@@ -40,11 +39,18 @@ export const useStations = () => {
   };
 
   useEffect(() => {
-    fetchStations();
-  }, []);
+    if (operatorAddress) {
+      fetchOperatorStations(operatorAddress);
+    } else {
+      setLoading(false);
+      setStations([]);
+    }
+  }, [operatorAddress]);
 
   const refetchStations = async () => {
-    await fetchStations();
+    if (operatorAddress) {
+      await fetchOperatorStations(operatorAddress);
+    }
   };
 
   return {
