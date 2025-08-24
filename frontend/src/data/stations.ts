@@ -4,7 +4,6 @@ export interface Station {
   id: string;
   name: string;
   location: string;
-  address: string;
   coordinates: [number, number];
   distance?: string;
   rating?: number;
@@ -25,8 +24,7 @@ export const STATIONS: Station[] = [
   {
     id: "A",
     name: "Cubbon Park Metro EV Hub", 
-    location: "Cubbon Park",
-    address: "Near State Central Library, Cubbon Park Metro Station, MG Road, Bangalore 560001",
+    location: "Near State Central Library, Cubbon Park Metro Station, MG Road, Bangalore 560001",
     coordinates: [77.5959, 12.9762],
     distance: "0.1 km",
     rating: 4.5,
@@ -44,8 +42,7 @@ export const STATIONS: Station[] = [
   {
     id: "B",
     name: "Trinity Metro Power Station",
-    location: "Trinity Circle",
-    address: "Trinity Metro Station, MG Road, Near Holy Trinity Church, Bangalore 560001",
+    location: "Trinity Metro Station, MG Road, Near Holy Trinity Church, Bangalore 560001",
     coordinates: [77.6199, 12.9783],
     distance: "1.2 km",
     rating: 4.3,
@@ -63,8 +60,7 @@ export const STATIONS: Station[] = [
   {
     id: "C",
     name: "Indiranagar Metro EV Center",
-    location: "Indiranagar",
-    address: "Indiranagar Metro Station, 100 Feet Road, HAL 2nd Stage, Bangalore 560038",
+    location: "Indiranagar Metro Station, 100 Feet Road, HAL 2nd Stage, Bangalore 560038",
     coordinates: [77.6408, 12.9719],
     distance: "5.8 km",
     rating: 4.1,
@@ -82,8 +78,7 @@ export const STATIONS: Station[] = [
   {
     id: "D",
     name: "Forum Koramangala Power Point",
-    location: "Koramangala",
-    address: "The Forum Mall, 80 Feet Road, 7th Block, Koramangala, Bangalore 560095",
+    location: "The Forum Mall, 80 Feet Road, 7th Block, Koramangala, Bangalore 560095",
     coordinates: [77.6112, 12.9343],
     distance: "4.8 km",
     rating: 4.6,
@@ -101,8 +96,7 @@ export const STATIONS: Station[] = [
   {
     id: "E",
     name: "Whitefield Metro Tech Hub",
-    location: "Whitefield",
-    address: "Whitefield Metro Station, ITPL Main Road, Whitefield, Bangalore 560066",
+    location: "Whitefield Metro Station, ITPL Main Road, Whitefield, Bangalore 560066",
     coordinates: [77.7399, 12.9763],
     distance: "16.5 km",
     rating: 4.4,
@@ -120,8 +114,7 @@ export const STATIONS: Station[] = [
   {
     id: "F",
     name: "Electronic City Infosys Station",
-    location: "Electronic City",
-    address: "Near Infosys Gate 1, Electronics City Phase 1, Bangalore 560100",
+    location: "Near Infosys Gate 1, Electronics City Phase 1, Bangalore 560100",
     coordinates: [77.6599, 12.8502],
     distance: "14.2 km",
     rating: 4.2,

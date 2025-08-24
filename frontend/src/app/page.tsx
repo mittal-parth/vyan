@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import Map, {
-  Marker,
-  NavigationControl,
-  FullscreenControl,
-  GeolocateControl,
-} from "react-map-gl/mapbox";
+import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { STATIONS, getStatusColor, type Station } from "@/data/stations";
+import { getStatusColor, type Station } from "@/data/stations";
 import { MapPin } from "@/components/MapPin";
 import { StationPopup } from "@/components/StationPopup";
 import {
   TbBatteryFilled,
   TbMapPin,
   TbCloud,
-
+  TbLoader2,
+  TbAlertCircle,
 } from "react-icons/tb";
 import { Header } from "@/components/Header";
+import { useStations } from "@/hooks/useStations";
 
 export default function MobileDashboard() {
   const [viewState, setViewState] = useState({
@@ -27,8 +24,8 @@ export default function MobileDashboard() {
   });
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
 
-  // Get stations from centralized data
-  const stations: Station[] = STATIONS.slice(0, 4); // Use first 4 stations
+  // Get stations from smart contract
+  const { stations, loading, error, refetchStations } = useStations();
 
   // Use centralized status color function
 
@@ -40,20 +37,71 @@ export default function MobileDashboard() {
     setSelectedStation(null);
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-custom-bg-light to-custom-bg-dark">
+        <div className="max-w-sm mx-auto">
+          <Header />
+          {/* Car Info Section */}
+          <CarInfoSection />
+
+          {/* Weather & Favorite Station Row */}
+          <WeatherFavoriteSection />
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <TbLoader2 className="w-8 h-8 text-neutral-400 animate-spin mx-auto mb-4" />
+              <p className="text-neutral-400">Loading stations...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-custom-bg-light to-custom-bg-dark">
+        <div className="max-w-sm mx-auto">
+          <Header />
+          {/* Car Info Section */}
+          <CarInfoSection />
+
+          {/* Weather & Favorite Station Row */}
+          <WeatherFavoriteSection />
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <TbAlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+              <p className="text-neutral-400 mb-4">Failed to load stations</p>
+              <p className="text-neutral-500 text-sm mb-4">{error}</p>
+              <button
+                onClick={refetchStations}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-custom-bg-light to-custom-bg-dark">
       <div className="max-w-sm mx-auto">
         {/* Header Section */}
         <Header />
-        
+
         {/* Car Info Section */}
         <CarInfoSection />
-        
+
         {/* Weather & Favorite Station Row */}
         <WeatherFavoriteSection />
-        
+
         {/* Map Section */}
-        <MapSection 
+        <MapSection
           viewState={viewState}
           setViewState={setViewState}
           stations={stations}
@@ -70,8 +118,6 @@ export default function MobileDashboard() {
 function MobileHeader() {
   return (
     <div className="pt-12 pb-4 px-6">
-
-      
       <div>
         <p className="text-neutral-400 text-sm">Good morning, Parth!</p>
       </div>
@@ -85,13 +131,13 @@ function CarInfoSection() {
       <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-4 relative overflow-hidden">
         {/* Background car image */}
         <div className="absolute right-0 top-0 opacity-80">
-          <img 
-            src="/cybertruck.png" 
+          <img
+            src="/cybertruck.png"
             alt="Tesla Model X"
             className="w-32 h-20 object-contain"
           />
         </div>
-        
+
         <div className="relative z-10">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -99,13 +145,13 @@ function CarInfoSection() {
               <p className="text-neutral-500 text-xs">F23 4XB</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2 mb-2">
             <TbBatteryFilled className="w-5 h-5 text-emerald-400" />
             <span className="text-emerald-400 font-semibold text-lg">37%</span>
             <span className="text-neutral-400 text-sm">Battery</span>
           </div>
-          
+
           <div className="w-full bg-custom-bg-light shadow-neuro-dark-inset rounded-full h-2">
             <div
               className="h-2 rounded-full bg-emerald-500 transition-all duration-300"
@@ -131,30 +177,32 @@ function WeatherFavoriteSection() {
           <div className="text-neutral-200 text-xl font-bold mb-0.5">23°C</div>
           <div className="text-neutral-500 text-xs">Day 27°C • Night 20°C</div>
         </div>
-        
+
         {/* Favorite Station Card */}
         <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-xl p-3">
           <div className="flex items-center space-x-1 mb-1">
             <TbMapPin className="w-4 h-4 text-emerald-400" />
             <span className="text-neutral-400 text-xs">Favorite station</span>
           </div>
-          <div className="text-neutral-200 font-semibold text-sm mb-0.5">Tesla Station</div>
-          <div className="text-neutral-500 text-xs">Hanover St. 24</div>
-          <div className="text-emerald-400 text-xs font-medium">1.2 mi</div>
+          <div className="text-neutral-200 font-semibold text-sm mb-0.5">
+            Cubbon Park...
+          </div>
+          <div className="text-neutral-500 text-xs">Cubbon Park</div>
+          <div className="text-emerald-400 text-xs font-medium">4 km</div>
         </div>
       </div>
     </div>
   );
 }
 
-function MapSection({ 
-  viewState, 
-  setViewState, 
-  stations, 
+function MapSection({
+  viewState,
+  setViewState,
+  stations,
   getStatusColor,
   selectedStation,
   onMarkerClick,
-  onMapClick
+  onMapClick,
 }: {
   viewState: any;
   setViewState: (state: any) => void;
@@ -173,7 +221,9 @@ function MapSection({
             onMove={(evt) => setViewState(evt.viewState)}
             onClick={onMapClick}
             mapStyle="mapbox://styles/mapbox/dark-v11"
-            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
+            mapboxAccessToken={
+              process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""
+            }
             style={{ width: "100%", height: "100%" }}
           >
             {/* Map Controls */}
@@ -195,7 +245,7 @@ function MapSection({
                   onMarkerClick(station);
                 }}
               >
-                <MapPin 
+                <MapPin
                   station={station}
                   getStatusColor={getStatusColor}
                   showStatusColors={false}

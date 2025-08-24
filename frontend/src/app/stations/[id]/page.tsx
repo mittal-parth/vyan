@@ -150,7 +150,7 @@ export default function StationDetailPage({ params }: { params: { id: string } }
         {/* Station Name */}
         <div className="text-center pb-8">
           <h1 className="text-neutral-200 text-2xl">{station.name}</h1>
-          <p className="text-neutral-400 text-sm mt-2">{station.address || station.location}</p>
+          <p className="text-neutral-400 text-sm mt-2">{station.location}</p>
         </div>
 
         {/* Main Content: Battery + Info Cards */}

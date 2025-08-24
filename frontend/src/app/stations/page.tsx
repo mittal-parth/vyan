@@ -21,8 +21,7 @@ export default function StationsPage() {
   const filteredStations = stations.filter(
     (station) =>
       station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      station.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (station.address && station.address.toLowerCase().includes(searchQuery.toLowerCase()))
+      station.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -106,7 +105,7 @@ function StationCard({ station }: { station: Station }) {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <TbMapPin className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-              <span className="text-neutral-400 text-xs truncate">{station.address || station.location}</span>
+              <span className="text-neutral-400 text-xs truncate">{station.location}</span>
             </div>
             <div className="flex items-center space-x-2">
               <TbClock className="w-4 h-4 text-neutral-400 flex-shrink-0" />

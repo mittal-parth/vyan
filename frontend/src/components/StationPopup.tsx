@@ -75,9 +75,7 @@ export function StationPopup({
         <p className="text-neutral-400 text-sm mb-2">
           {station.location}
         </p>
-        <p className="text-neutral-500 text-xs mb-3">
-          {station.address}
-        </p>
+
 
         {/* AI Prediction - only show if enabled and prediction exists */}
         {showAIWarnings && station.predictedEmptyIn && (
