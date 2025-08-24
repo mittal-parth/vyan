@@ -3,8 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import PaymentSuccess from "@/components/PaymentSuccess";
+import AnimatedBattery from "@/components/AnimatedBattery";
+import DraggableSlider from "@/components/DraggableSlider";
 import { getStationByNumericId, type Station } from "@/data/stations";
-import { TbBattery, TbBolt, TbCoin, TbWallet, TbArrowRight, TbArrowLeft } from "react-icons/tb";
+import { TbBattery, TbBolt, TbCoin, TbWallet, TbArrowLeft, TbQrcode, TbCamera } from "react-icons/tb";
 
 // Station-specific InfoCard component
 function StationInfoCard({ title, subtitle, className = "flex-1" }: {
@@ -25,7 +28,16 @@ export default function StationDetailPage({ params }: { params: { id: string } }
   const [isSliderActive, setIsSliderActive] = useState(false);
   const [sliderPosition, setSliderPosition] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [hasScanned, setHasScanned] = useState(false);
+  const [batteryInserted, setBatteryInserted] = useState(false);
+  const [batteryReady, setBatteryReady] = useState(false);
+  const [paymentSuccessful, setPaymentSuccessful] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
 
   // Get station data from centralized data
@@ -44,6 +56,74 @@ export default function StationDetailPage({ params }: { params: { id: string } }
       </div>
     );
   }
+
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      setIsScanning(true);
+      
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Prefer back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      
+      streamRef.current = stream;
+      
+      // Wait for video to be ready
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          // Start 5-second countdown after camera is visible
+          timeoutRef.current = setTimeout(() => {
+            stopCamera();
+            setHasScanned(true);
+          }, 5000);
+        };
+      }
+    } catch (error) {
+      console.error('Camera access error:', error);
+      setCameraError('Unable to access camera. Please check permissions.');
+      setIsScanning(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    setIsScanning(false);
+  };
+
+  const handleStartScan = () => {
+    startCamera();
+  };
+
+  const handleBatteryInserted = () => {
+    setBatteryInserted(true);
+    setBatteryReady(true);
+  };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -72,12 +152,11 @@ export default function StationDetailPage({ params }: { params: { id: string } }
           setShowToast(true);
           setIsSliderActive(false);
           setSliderPosition(0);
+          // Show payment success after toast
+          setTimeout(() => {
+            setPaymentSuccessful(true);
+          }, 1000);
         }, 500);
-        
-        // Auto-hide toast after 3 seconds
-        setTimeout(() => {
-          setShowToast(false);
-        }, 3500);
       }
     } catch (error) {
       console.error('Error in handleMouseMove:', error);
@@ -101,12 +180,11 @@ export default function StationDetailPage({ params }: { params: { id: string } }
           setShowToast(true);
           setIsSliderActive(false);
           setSliderPosition(0);
+          // Show payment success after toast
+          setTimeout(() => {
+            setPaymentSuccessful(true);
+          }, 1000);
         }, 500);
-        
-        // Auto-hide toast after 3 seconds
-        setTimeout(() => {
-          setShowToast(false);
-        }, 3500);
       }
     } catch (error) {
       console.error('Error in handleTouchMove:', error);
@@ -141,6 +219,192 @@ export default function StationDetailPage({ params }: { params: { id: string } }
     };
   }, []);
 
+  // Show QR Scanner Interface
+  if (!hasScanned) {
+    return (
+      <div className="min-h-screen">
+        <div className="max-w-sm mx-auto space-y-8">
+          <Header />
+          
+          <div className="px-6">
+            {/* Station Name */}
+            <div className="text-center pb-8">
+              <h1 className="text-neutral-200 text-2xl">{station.name}</h1>
+              <p className="text-neutral-400 text-sm mt-2">{station.location}</p>
+            </div>
+
+            {/* QR Scanner Interface */}
+            <div className="text-center space-y-6">
+              {!isScanning ? (
+                <>
+                  <div className="bg-custom-bg-shadow-dark rounded-2xl shadow-neuro-dark-deep p-8">
+                    <TbQrcode className="w-20 h-20 text-emerald-400 mx-auto mb-4" />
+                    <h2 className="text-neutral-200 text-xl mb-2">Scan QR Code</h2>
+                    <p className="text-neutral-400 text-sm mb-6">
+                      Scan the QR code on your battery to begin the swap process
+                    </p>
+                    <button
+                      onClick={handleStartScan}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2 mx-auto"
+                    >
+                      <TbCamera className="w-5 h-5" />
+                      <span>Start Scanning</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-custom-bg-shadow-dark rounded-2xl shadow-neuro-dark-deep p-8">
+                    <div className="relative w-64 h-64 mx-auto mb-6">
+                      {/* Camera Frame with Video */}
+                      <div className="absolute inset-0 border-4 border-emerald-400 rounded-2xl overflow-hidden">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                        
+                        {/* Scanning Overlay */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          {/* Corner Indicators */}
+                          <div className="absolute top-2 left-2 w-8 h-8 border-l-2 border-t-2 border-emerald-400"></div>
+                          <div className="absolute top-2 right-2 w-8 h-8 border-r-2 border-t-2 border-emerald-400"></div>
+                          <div className="absolute bottom-2 left-2 w-8 h-8 border-l-2 border-b-2 border-emerald-400"></div>
+                          <div className="absolute bottom-2 right-2 w-8 h-8 border-r-2 border-b-2 border-emerald-400"></div>
+                          
+                          {/* Center Crosshair */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-16 h-16 border-2 border-emerald-400 rounded-lg relative">
+                              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-emerald-400 transform -translate-y-1/2"></div>
+                              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-400 transform -translate-x-1/2"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Scanning Lines */}
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-400 animate-pulse"></div>
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-400 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400 animate-pulse" style={{ animationDelay: '1s' }}></div>
+                          <div className="absolute right-0 top-0 bottom-0 w-1 bg-emerald-400 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <h2 className="text-neutral-200 text-xl mb-2">Scanning...</h2>
+                    <p className="text-neutral-400 text-sm">
+                      Please hold the QR code steady in the frame
+                    </p>
+                    
+                    {/* Progress Bar */}
+                    <div className="mt-6 w-full bg-custom-bg-dark rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-emerald-400 h-2 rounded-full transition-all duration-100 ease-linear"
+                        style={{ width: '20%' }}
+                      ></div>
+                    </div>
+                    
+                    <p className="text-emerald-400 text-sm mt-2">Processing...</p>
+                  </div>
+                </>
+              )}
+              
+              {/* Camera Error Display */}
+              {cameraError && (
+                <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                  <p className="text-red-400 text-sm">{cameraError}</p>
+                  <button
+                    onClick={() => setCameraError(null)}
+                    className="mt-2 text-red-300 text-xs underline hover:text-red-200"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show Battery Info and Insertion Flow after QR scan
+  if (!batteryReady) {
+    return (
+      <div className="min-h-screen">
+        <div className="max-w-sm mx-auto space-y-8">
+          <Header />
+          
+          <div className="px-6">
+            {/* Station Name */}
+            <div className="text-center pb-8">
+              <h1 className="text-neutral-200 text-2xl">{station.name}</h1>
+              <p className="text-neutral-400 text-sm mt-2">{station.location}</p>
+            </div>
+
+            {/* Main Content: Battery + Info Cards */}
+            <div className="flex space-x-8 p-6">
+              {/* Left Half: Animated Battery */}
+              <div className="flex-1 flex items-end justify-center">
+                <AnimatedBattery percentage={station.percentage || Math.round((station.charged / station.total) * 100)} />
+              </div>
+              
+              {/* Right Half: Three Info Cards */}
+              <div className="flex-1 space-y-4">
+                <StationInfoCard
+                  title="Available Batteries"
+                  subtitle={`${station.availableBatteries || station.charged}/${station.totalSlots || station.total}`}
+                  className="w-full h-20"
+                />
+                <StationInfoCard
+                  title="Swap Fee"
+                  subtitle={`${station.swapFee || 5} STK`}
+                  className="w-full h-20"
+                />
+                <StationInfoCard
+                  title="Wallet Balance"
+                  subtitle="150 STK"
+                  className="w-full h-20"
+                />
+              </div>
+            </div>
+
+            {/* Battery Insertion Instructions */}
+            <div className="text-center space-y-6">
+              {!batteryInserted ? (
+                <div className="p-6">
+                  <p className="text-neutral-400 text-xs mb-6">
+                    Please insert your discharged battery into the designated slot and press the button below once completed.
+                  </p>
+                  <button
+                    onClick={handleBatteryInserted}
+                    className="bg-custom-bg-shadow-dark hover:bg-custom-bg-dark text-emerald-400 text-sm hover:text-emerald-300 px-8 py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 mx-auto shadow-neuro-dark-outset hover:shadow-neuro-dark-pressed border border-custom-bg-light/20"
+                  >
+                    <TbBattery className="w-5 h-5" />
+                    <span>Battery Inserted</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show Payment Success Screen
+  if (paymentSuccessful) {
+    return (
+      <div className="min-h-screen">
+        <div className="max-w-sm mx-auto">
+          <Header />
+          <PaymentSuccess />
+        </div>
+      </div>
+    );
+  }
+
+  // Show Existing UI with slider after battery is ready
   return (
     <div className="min-h-screen">
       <div className="max-w-sm mx-auto space-y-8">
@@ -180,6 +444,15 @@ export default function StationDetailPage({ params }: { params: { id: string } }
           </div>
         </div>
 
+        {/* Battery Status Message */}
+        {batteryInserted && (
+          <div className="text-center pt-6">
+            <p className="text-emerald-400 text-sm font-medium">
+              ✓ Your battery has been inserted
+            </p>
+          </div>
+        )}
+
         {/* Draggable Slider Component */}
         <div className="pt-6">
           <DraggableSlider
@@ -190,164 +463,11 @@ export default function StationDetailPage({ params }: { params: { id: string } }
             onTouchStart={handleTouchStart}
           />
         </div>
-        
-        {/* Toast Notification */}
-        {showToast && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-emerald-900 text-white px-6 py-3 rounded-2xl shadow-lg z-50 transition-all duration-300 ease-out">
-            <div className="flex items-center space-x-2">
-              <TbBolt className="w-5 h-5" />
-              <span className="font-medium">Swap process initiated!</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
     </div>
   );
 }
 
-// Animated Battery Component
-function AnimatedBattery({ percentage }: { percentage: number }) {
-  return (
-    <div className="relative w-32 h-64">
-      {/* Battery Outline */}
-      <div className="absolute inset-0 bg-custom-bg-shadow-dark rounded-2xl shadow-neuro-dark-inset border-2 border-custom-bg-light">
-        {/* Battery Top Cap */}
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-custom-bg-light rounded-t-lg shadow-neuro-dark-outset"></div>
-        
-        {/* Battery Fluid Container */}
-        <div className="absolute inset-2 rounded-xl overflow-hidden">
-          {/* Battery Fluid with Enhanced Wave Animation */}
-          <div 
-            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-700 via-emerald-800 to-emerald-900 transition-all duration-1000 ease-out"
-            style={{ 
-              height: `${percentage}%`,
-              animation: 'fluidWave 4s ease-in-out infinite'
-            }}
-          >
-            {/* Multiple Wave Layers for More Dynamic Effect */}
-            <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-b from-emerald-600/40 to-transparent rounded-t-full animate-pulse"></div>
-            <div className="absolute top-2 left-0 right-0 h-2 bg-gradient-to-b from-emerald-500/30 to-transparent rounded-t-full" style={{ animation: 'waveMove 3s ease-in-out infinite' }}></div>
-            <div className="absolute top-4 left-0 right-0 h-1 bg-gradient-to-b from-emerald-400/20 to-transparent rounded-t-full" style={{ animation: 'waveMove 2.5s ease-in-out infinite reverse' }}></div>
-            
-            {/* Floating Particles Effect */}
-            <div className="absolute top-2 left-1/4 w-1 h-1 bg-emerald-500/60 rounded-full" style={{ animation: 'floatUp 6s ease-in-out infinite' }}></div>
-            <div className="absolute top-4 right-1/3 w-1.5 h-1.5 bg-emerald-600/50 rounded-full" style={{ animation: 'floatUp 5s ease-in-out infinite 1s' }}></div>
-            <div className="absolute top-6 left-1/2 w-1 h-1 bg-emerald-500/40 rounded-full" style={{ animation: 'floatUp 7s ease-in-out infinite 2s' }}></div>
-          </div>
-        </div>
-        
-        {/* Battery Percentage Text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-neutral-200 text-lg z-10">{percentage}%</span>
-        </div>
-      </div>
-      
-      {/* Enhanced CSS Animations */}
-      <style jsx>{`
-        @keyframes fluidWave {
-          0%, 100% { 
-            transform: translateY(0px) scaleY(1);
-            border-radius: 0 0 12px 12px;
-          }
-          25% { 
-            transform: translateY(-3px) scaleY(1.02);
-            border-radius: 0 0 14px 14px;
-          }
-          50% { 
-            transform: translateY(-1px) scaleY(1.01);
-            border-radius: 0 0 13px 13px;
-          }
-          75% { 
-            transform: translateY(-2px) scaleY(1.015);
-            border-radius: 0 0 15px 15px;
-          }
-        }
-        
-        @keyframes waveMove {
-          0%, 100% { 
-            transform: translateX(0px) scaleX(1);
-            opacity: 0.8;
-          }
-          50% { 
-            transform: translateX(2px) scaleX(1.1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes floatUp {
-          0%, 100% { 
-            transform: translateY(0px) translateX(0px);
-            opacity: 0.6;
-          }
-          25% { 
-            transform: translateY(-4px) translateX(1px);
-            opacity: 1;
-          }
-          50% { 
-            transform: translateY(-2px) translateX(-1px);
-            opacity: 0.8;
-          }
-          75% { 
-            transform: translateY(-3px) translateX(2px);
-            opacity: 0.9;
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
 
-// Draggable Slider Component
-function DraggableSlider({
-  isSliderActive,
-  sliderPosition,
-  sliderRef,
-  onMouseDown,
-  onTouchStart
-}: {
-  isSliderActive: boolean;
-  sliderPosition: number;
-  sliderRef: React.RefObject<HTMLDivElement>;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onTouchStart: (e: React.TouchEvent) => void;
-}) {
-  return (
-    <div className="p-6">
-      <div className="text-center mb-6">
-        <p className="text-neutral-400 text-sm">Slide to start battery swap</p>
-      </div>
-      
-      <div 
-        ref={sliderRef}
-        className="relative w-full h-16 bg-custom-bg-shadow-dark rounded-3xl shadow-neuro-dark-inset overflow-hidden"
-        onMouseDown={onMouseDown}
-        onTouchStart={onTouchStart}
-      >
-        {/* Slider Track */}
-        <div className="absolute inset-0 bg-custom-bg-dark rounded-3xl" />
-        
-        {/* Progress Bar */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-600 to-emerald-700 transition-all duration-200 ease-out"
-          style={{ width: `${sliderPosition}%` }}
-        />
-        
-        {/* Slider Button */}
-        <div 
-          className="absolute top-2 w-12 h-12 bg-custom-bg-light rounded-2xl shadow-neuro-dark-outset flex items-center justify-center cursor-pointer transition-all duration-200 ease-out hover:shadow-neuro-dark-pressed"
-          style={{ left: `max(0px, calc(${sliderPosition}% - 24px))` }}
-        >
-          <TbArrowRight className="w-6 h-6 text-emerald-400" />
-        </div>
-        
-        {/* Slider Text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-emerald-400 text-sm font-medium">
-            {isSliderActive ? "Processing..." : "Slide to swap"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
+
