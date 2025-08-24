@@ -3,7 +3,28 @@
 import { TbUser } from "react-icons/tb";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { client } from "../app/client";
-import { scrollSepoliaTestnet } from "thirdweb/chains";
+const THIRDWEB_API_KEY = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID;
+
+// Custom sei-testnet chain configuration
+const seiTestnet = {
+  id: 1328,
+  name: "Sei Testnet",
+  nativeCurrency: {
+    name: "Sei",
+    symbol: "SEI",
+    decimals: 18,
+  },
+  rpc: `https://1328.rpc.thirdweb.com/${THIRDWEB_API_KEY}`,
+  blockExplorers: [
+    {
+      name: "Seitrace",
+      url: "https://seitrace.com/",
+    },
+  ],
+  testnet: true as const,
+};
+
+
 interface ConnectWalletProps {
   className?: string;
 }
@@ -15,6 +36,7 @@ export function ConnectWallet({ className = "" }: ConnectWalletProps) {
     <div className={`relative ${className}`}>
       <ConnectButton
         client={client}
+        chain={seiTestnet}
         connectButton={{
           style: {
             width: "48px",
