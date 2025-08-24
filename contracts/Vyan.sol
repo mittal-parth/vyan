@@ -43,20 +43,11 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         address indexed depositor
     );
     
-    event BatteryWithdrawn(
-        string indexed stationId,
-        uint256 indexed batteryId,
-        address indexed withdrawer
-    );
-    
     event FeeCalculated(
         uint256 indexed batteryId,
         uint256 finalFee
     );
     
-
-
-
 
     // =================== STRUCTS ===================
     
@@ -100,26 +91,25 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
     struct UserProfile {
         address userAddress;
         uint256 totalSwaps;
-        uint256 totalSeiSpent;
         uint256[] ownedBatteries;    // Batteries currently owned by user
     }
 
     // =================== STATE VARIABLES ===================
     
-    // Core mappings
-    mapping(string => Station) public stations;
-    mapping(uint256 => Battery) public batteries;
-    mapping(address => UserProfile) public userProfiles;
-    mapping(string => bool) public stationExists;
-    mapping(uint256 => bool) public batteryExists;
+    // Core mappings - made private since we have getter functions
+    mapping(string => Station) private stations;
+    mapping(uint256 => Battery) private batteries;
+    mapping(address => UserProfile) private userProfiles;
+    mapping(string => bool) private stationExists;
+    mapping(uint256 => bool) private batteryExists;
     
-    // Station management
-    string[] public stationIds;
-    mapping(address => string[]) public operatorStations;
+    // Station management - made private since we have getter functions
+    string[] private stationIds;
+    mapping(address => string[]) private operatorStations;
     
     // Battery tracking
     Counters.Counter private _batteryIdCounter;
-    mapping(address => uint256[]) public userBatteries;
+    mapping(address => uint256[]) private userBatteries;
     
     // Platform configuration
     address public treasuryAddress;             // Platform treasury
@@ -166,7 +156,9 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         int256 _latitude,
         int256 _longitude,
         uint256 _totalSlots,
-        uint256 _baseFee
+        uint256 _baseFee,
+        uint16 _rating,
+        uint256 _availableSlots
     ) external {
         require(!stationExists[_stationId], "Station already exists");
         require(_totalSlots > 0, "Total slots must be greater than 0");
@@ -184,7 +176,8 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         newStation.isActive = true;
         newStation.createdAt = block.timestamp;
         newStation.baseFee = _baseFee;
-        newStation.rating = 5; // Default rating
+        newStation.rating = _rating; // Default rating
+        newStation.availableSlots = _availableSlots;
         
         stationExists[_stationId] = true;
         stationIds.push(_stationId);
@@ -332,7 +325,6 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         
         // Update user stats
         userProfiles[msg.sender].totalSwaps++;
-        userProfiles[msg.sender].totalSeiSpent += swapFee;
         
         // Emit event
         emit BatterySwapped(msg.sender, stationId, userBatteryId, bestBatteryId, swapFee, block.timestamp);
@@ -401,30 +393,6 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         _removeBatteryFromUser(msg.sender, batteryId);
         
         emit BatteryDeposited(stationId, batteryId, msg.sender);
-    }
-    
-    /**
-     * @dev Withdraw battery from station (for operators)
-     */
-    function withdrawBatteryFromStation(
-        string memory stationId,
-        uint256 batteryId
-    ) external onlyStationOperator(stationId) batteryMustExist(batteryId) {
-        Battery storage battery = batteries[batteryId];
-        
-        require(
-            keccak256(bytes(battery.currentStationId)) == keccak256(bytes(stationId)),
-            "Battery not at this station"
-        );
-        
-        _removeBatteryFromStation(stationId, batteryId);
-        
-        battery.currentOwner = msg.sender;
-        battery.currentStationId = "";
-        
-        _addBatteryToUser(msg.sender, batteryId);
-        
-        emit BatteryWithdrawn(stationId, batteryId, msg.sender);
     }
 
     // =================== HELPER FUNCTIONS ===================
@@ -518,10 +486,16 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
     // =================== VIEW FUNCTIONS ===================
     
     /**
-     * @dev Get all station IDs
+     * @dev Get all stations with full data
      */
-    function getAllStationIds() external view returns (string[] memory) {
-        return stationIds;
+    function getAllStations() external view returns (Station[] memory) {
+        Station[] memory allStations = new Station[](stationIds.length);
+        
+        for (uint256 i = 0; i < stationIds.length; i++) {
+            allStations[i] = stations[stationIds[i]];
+        }
+        
+        return allStations;
     }
     
     /**
@@ -537,10 +511,31 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Get user batteries
+     * @dev Get all stations operated by a specific operator with full data
      */
-    function getUserBatteries(address user) external view returns (uint256[] memory) {
-        return userBatteries[user];
+    function getOperatorStations(address operator) external view returns (Station[] memory) {
+        string[] memory operatorStationIds = operatorStations[operator];
+        Station[] memory operatorStationsData = new Station[](operatorStationIds.length);
+        
+        for (uint256 i = 0; i < operatorStationIds.length; i++) {
+            operatorStationsData[i] = stations[operatorStationIds[i]];
+        }
+        
+        return operatorStationsData;
+    }
+    
+    /**
+     * @dev Get user batteries with full data
+     */
+    function getUserBatteries(address user) external view returns (Battery[] memory) {
+        uint256[] memory batteryIds = userBatteries[user];
+        Battery[] memory userBatteriesData = new Battery[](batteryIds.length);
+        
+        for (uint256 i = 0; i < batteryIds.length; i++) {
+            userBatteriesData[i] = batteries[batteryIds[i]];
+        }
+        
+        return userBatteriesData;
     }
     
     /**
@@ -609,6 +604,36 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
             battery.currentStationId,
             battery.isAvailableForSwap
         );
+    }
+    
+    /**
+     * @dev Get user profile data
+     */
+    function getUserProfile(address user) external view returns (
+        address userAddress,
+        uint256 totalSwaps,
+        uint256[] memory ownedBatteries
+    ) {
+        UserProfile memory profile = userProfiles[user];
+        return (
+            profile.userAddress,
+            profile.totalSwaps,
+            profile.ownedBatteries
+        );
+    }
+    
+    /**
+     * @dev Check if station exists
+     */
+    function getStationExists(string memory stationId) external view returns (bool) {
+        return stationExists[stationId];
+    }
+    
+    /**
+     * @dev Check if battery exists
+     */
+    function getBatteryExists(uint256 batteryId) external view returns (bool) {
+        return batteryExists[batteryId];
     }
     
 
