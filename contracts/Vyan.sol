@@ -34,7 +34,8 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         uint256 indexed oldBatteryId,
         uint256 newBatteryId,
         uint256 swapFee,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 remainingBatteries
     );
     
     event BatteryDeposited(
@@ -48,6 +49,16 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         uint256 finalFee
     );
     
+    event AIRecommendation(
+        string indexed routeId,
+        string fromStation,
+        string toStation,
+        uint256 batteries,
+        string eta,
+        string priority,
+        string reason,
+        uint256 timestamp
+    );
 
     // =================== STRUCTS ===================
     
@@ -185,21 +196,7 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         
         emit StationRegistered(_stationId, msg.sender, _name, _location, _totalSlots);
     }
-    
-    /**
-     * @dev Update station information (operator only)
-     */
-    function updateStation(
-        string memory stationId,
-        string memory _name,
-        string memory _location,
-        uint256 _baseFee
-    ) external onlyStationOperator(stationId) {
-        Station storage station = stations[stationId];
-        station.name = _name;
-        station.location = _location;
-        station.baseFee = _baseFee;
-    }
+
     
     /**
      * @dev Toggle station active status
@@ -327,7 +324,7 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
         userProfiles[msg.sender].totalSwaps++;
         
         // Emit event
-        emit BatterySwapped(msg.sender, stationId, userBatteryId, bestBatteryId, swapFee, block.timestamp);
+        emit BatterySwapped(msg.sender, stationId, userBatteryId, bestBatteryId, swapFee, block.timestamp, stations[stationId].availableSlots);
         emit FeeCalculated(bestBatteryId, swapFee);
     }
     
@@ -635,32 +632,7 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
     function getBatteryExists(uint256 batteryId) external view returns (bool) {
         return batteryExists[batteryId];
     }
-    
 
-
-    // =================== GOVERNANCE FUNCTIONS ===================
-    
-    /**
-     * @dev Update platform configuration (simplified for POC)
-     */
-    function updatePlatformConfig(
-        uint256 _platformFeePercentage,
-        address _treasuryAddress
-    ) external onlyOwner {
-        require(_platformFeePercentage <= 10, "Platform fee too high");
-        
-        platformFeePercentage = _platformFeePercentage;
-        treasuryAddress = _treasuryAddress;
-    }
-    
-    /**
-     * @dev Withdraw excess funds (emergency function)
-     */
-    function withdrawFunds(uint256 amount) external onlyOwner {
-        require(amount <= address(this).balance, "Insufficient balance");
-        (bool success, ) = msg.sender.call{value: amount}("");
-        require(success, "Withdrawal failed");
-    }
     
     /**
      * @dev Emergency pause/unpause
@@ -671,5 +643,66 @@ contract Vyan is Ownable, ReentrancyGuard, Pausable {
     
     function unpause() external onlyOwner {
         _unpause();
+    }
+    
+    // =================== EVENT GENERATION ===================
+    
+    /**
+     * @dev Generate AI route recommendation event
+     * @param routeId Unique identifier for the route
+     * @param fromStation Source station ID
+     * @param toStation Destination station ID
+     * @param batteryCount Number of batteries to transfer
+     * @param eta Estimated time of arrival
+     * @param priority Priority level (critical, high, normal)
+     * @param reason Reason for the recommendation
+     */
+    function generateAIRouteRecommendation(
+        string memory routeId,
+        string memory fromStation,
+        string memory toStation,
+        uint256 batteryCount,
+        string memory eta,
+        string memory priority,
+        string memory reason
+    ) external onlyOwner {
+        emit AIRecommendation(
+            routeId,
+            fromStation,
+            toStation,
+            batteryCount,
+            eta,
+            priority,
+            reason,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @dev Generate BatterySwapped event for testing purposes
+     * @param user User address
+     * @param stationId Station ID
+     * @param oldBatteryId Old battery ID
+     * @param newBatteryId New battery ID
+     * @param swapFee Swap fee
+     * @param remainingBatteries Remaining batteries at station
+     */
+    function generateBatterySwappedEvent(
+        address user,
+        string memory stationId,
+        uint256 oldBatteryId,
+        uint256 newBatteryId,
+        uint256 swapFee,
+        uint256 remainingBatteries
+    ) external onlyOwner {
+        emit BatterySwapped(
+            user,
+            stationId,
+            oldBatteryId,
+            newBatteryId,
+            swapFee,
+            block.timestamp,
+            remainingBatteries
+        );
     }
 }
