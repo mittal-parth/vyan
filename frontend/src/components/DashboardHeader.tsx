@@ -1,32 +1,47 @@
 "use client";
 
-import Link from "next/link";
-import { TbHome, TbUser } from "react-icons/tb";
+import { TbX, TbMenu2, TbUser } from "react-icons/tb";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { client } from "../app/client";
 
-interface HeaderProps {
+interface DashboardHeaderProps {
+  setSidebarOpen: (open: boolean) => void;
+  sidebarOpen: boolean;
   title?: string;
-  homeHref?: string;
-  className?: string;
+  subtitle?: string;
 }
 
-export function Header({ 
-  title = "Vyan", 
-  homeHref = "/", 
-  className = ""
-}: HeaderProps) {
+export function DashboardHeader({
+  setSidebarOpen,
+  sidebarOpen,
+  title = "Station Dashboard",
+  subtitle = "Manage your EV battery swap network"
+}: DashboardHeaderProps) {
   const account = useActiveAccount();
   
   return (
-    <div className={`flex items-center justify-between pt-6 pb-12 px-6 ${className}`}>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="lg:hidden w-10 h-10 rounded-xl bg-custom-bg-light shadow-neuro-dark-outset flex items-center justify-center hover:shadow-neuro-dark-pressed transition-all duration-200"
+        >
+          {sidebarOpen ? (
+            <TbX className="w-5 h-5 text-neutral-400" />
+          ) : (
+            <TbMenu2 className="w-5 h-5 text-neutral-400" />
+          )}
+        </button>
+        <div>
+          <h1 className="text-neutral-200 text-2xl font-bold">
+            {title}
+          </h1>
+          <p className="text-neutral-400 text-sm">
+            {subtitle}
+          </p>
+        </div>
+      </div>
 
-      
-      {/* Title */}
-      <Link href={homeHref} className="text-center">
-        <p className="text-neutral-400 text-medium font-medium">{title}</p>
-      </Link>
-      
       {/* Connect Wallet */}
       <div className="relative">
         <ConnectButton
