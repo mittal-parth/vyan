@@ -338,11 +338,18 @@ function Header() {
 
   return (
     <div className="flex items-center justify-between">
-      <div className="text-left">
-        <h1 className="text-neutral-200 text-2xl font-bold tracking-tight">Vyan</h1>
-        <p className="text-neutral-400 text-sm font-medium">
-          Battery Station #{process.env.NEXT_PUBLIC_STATION_ID || "1"}
-        </p>
+      <div className="flex items-center gap-3">
+        <img 
+          src="/logo.png" 
+          alt="Vyan Logo" 
+          className="h-12 w-auto"
+        />
+        <div className="text-left">
+          <h1 className="text-neutral-200 text-2xl font-bold tracking-tight">Vyan</h1>
+          <p className="text-neutral-400 text-sm font-medium">
+            Battery Station #{process.env.NEXT_PUBLIC_STATION_ID || "1"}
+          </p>
+        </div>
       </div>
       
       <div className="flex space-x-3 items-center">

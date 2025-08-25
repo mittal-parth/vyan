@@ -18,8 +18,13 @@ export function Header({
     <div className={`flex items-center justify-between pt-6 pb-12 px-6 ${className}`}>
 
       
-      {/* Title */}
-      <Link href={homeHref} className="text-center">
+      {/* Logo and Title */}
+      <Link href={homeHref} className="flex items-center gap-3">
+        <img 
+          src="/logo.png" 
+          alt="Vyan Logo" 
+          className="h-8 w-auto"
+        />
         <p className="text-neutral-400 text-medium font-medium">{title}</p>
       </Link>
       
