@@ -11,115 +11,60 @@ Vyan is a decentralized battery swap network that enables electric vehicle users
 - **Smart Contract**: SwapToken ERC20 contract for rewards and staking
 - **Backend**: API for station management and user data
 
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Mobile App    │    │ Station Interface│    │  Smart Contract │
-│   (Frontend)    │◄──►│                  │◄──►│   (Vyan)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │    Backend API  │
-                    │   (Node.js)     │
-                    └─────────────────┘
-```
 
 ## 🔄 Complete System Flow
 
 ```mermaid
-flowchart TD
-    %% User Frontend
-    A[User opens app] --> B[Find nearest station]
-    B --> C[Arrive at station]
-    C --> D[Scan QR code]
+sequenceDiagram
+    participant U as User Frontend
+    participant S as Station Interface
+    participant API as FastAPI Server
+    participant C as Smart Contract
+    participant AI as AI Agent
+    participant O as Operator Dashboard
     
-    %% Station Interface
-    E[Station Interface displays QR] --> F[QR refreshes every 30s]
-    D --> G[QR scanned by user]
-    G --> H[Station shows: Hi username, follow Vyan App instructions]
-    H --> I[Abort button available]
+    Note over U,O: User arrives at station
+    U->>S: Scan QR code
+    S->>U: QR scanned confirmation
     
-    %% Frontend Session Start
-    G --> J[Frontend gets stationId]
-    J --> K[Call /session/start with station_id, user_id]
-    K --> L[Call getStationDetails contract function]
-    L --> M[Show: Connected to Z station, station info, battery status]
+    Note over U,O: Session initialization
+    U->>API: POST /session/start {station_id, user_id}
+    API->>U: Session created
+    U->>C: getStationDetails(stationId)
+    C->>U: Station info, battery status
     
-    %% Battery Insertion
-    M --> N[Message: Insert discharged battery and press button]
-    N --> O[User inserts battery]
-    O --> P[User clicks 'Discharged battery inserted' button]
-    P --> Q[Show: Battery X inserted]
+    Note over U,O: Battery insertion
+    U->>U: Show: Insert discharged battery
+    U->>U: User clicks "Battery inserted" button
+    U->>C: calculateSwapFee()
+    C->>U: Estimated swap fee
     
-    %% Payment Flow
-    Q --> R[Call calculateSwapFee contract function]
-    R --> S[Show estimated price]
-    S --> T[Slider button to confirm payment]
-    T --> U[Call swapBattery on-chain via Thirdweb]
-    U --> V[Payment confirmed]
+    Note over U,O: Payment and swap
+    U->>U: Show payment slider
+    U->>C: swapBattery() via Thirdweb
+    C->>U: Payment confirmed
+    U->>U: Show: Battery Y released
     
-    %% Battery Release
-    V --> W[Show: Battery Y released]
-    W --> X[Trigger AI agent monitoring]
+    Note over U,O: AI monitoring triggered
+    C->>AI: BatterySwapped event
+    AI->>C: getStationDetails() - check inventory
+    AI->>C: getAllStations() - analyze network
     
-    %% AI Agent Flow
-    X --> Y[AI Agent listens to BatterySwapped events]
-    Y --> Z[Query station for remaining batteries]
-    Z --> AA{Station needs refueling?}
-    AA -->|Yes| BB[Query all stations using getAllStations]
-    BB --> CC[AI generates rebalancing plan considering:]
-    CC --> DD[• Closest proximity]
-    CC --> EE[• Real-time traffic]
-    CC --> FF[• Battery availability]
-    CC --> GG[• Demand patterns]
-    CC --> HH[• Rebalance truck availability]
-    CC --> II[• Past 7 days usage data]
+    alt Low inventory detected
+        AI->>AI: Generate rebalancing plan
+        Note over AI: Consider: proximity, traffic,<br/>demand patterns, availability,<br/>truck availability, historical data
+        AI->>C: Emit AIRebalanceRequested event
+        C->>O: Event detected
+        O->>O: Show rebalancing strategies
+        O->>O: Operator reviews plans
+        O->>API: Execute rebalancing strategy
+        API->>S: Update station inventory
+    end
     
-    %% AI Plan Execution
-    DD --> JJ[Generate optimal rebalancing strategy]
-    EE --> JJ
-    FF --> JJ
-    GG --> JJ
-    HH --> JJ
-    II --> JJ
-    JJ --> KK[Emit AIRebalanceRequested event on-chain]
-    
-    %% Operator Dashboard
-    KK --> LL[Web frontend polls for AIRebalanceRequested events]
-    LL --> MM[Show rebalancing strategies to operator]
-    MM --> NN[Operator reviews and executes strategy]
-    NN --> OO[Update station inventory]
-    
-    %% Station Interface Success
-    W --> PP[Station interface shows success for 10 seconds]
-    PP --> QQ[Return to home page with new session]
-    
-    %% Session Management
-    K --> RR[FastAPI server manages dynamic sessions]
-    RR --> SS[Session state tracking]
-    
-    %% Contract Interactions
-    L --> TT[Smart contract state updates]
-    U --> TT
-    KK --> TT
-    
-    %% Styling
-    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef station fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef contract fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef server fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef ai fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef operator fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    
-    class A,B,C,D,J,K,L,M,N,O,P,Q,R,S,T,U,V,W frontend
-    class E,F,G,H,I,PP,QQ station
-    class L,R,U,KK,TT contract
-    class K,RR,SS server
-    class X,Y,Z,AA,BB,CC,DD,EE,FF,GG,HH,II,JJ ai
-    class LL,MM,NN,OO operator
+    Note over U,O: Station interface success
+    S->>S: Show success for 10 seconds
+    S->>S: Return to home page
+    API->>API: Track session completion
 ```
 
 ## 📱 User Journey
