@@ -1,9 +1,17 @@
 import type { Metadata } from 'next'
+import { Montserrat } from "next/font/google"
 import './globals.css'
+import { ThirdwebProvider } from "thirdweb/react"
+
+const montserrat = Montserrat({ 
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-montserrat"
+})
 
 export const metadata: Metadata = {
-  title: 'Battery Swap Station',
-  description: 'Station interface for battery swap operations',
+  title: 'Vyan Battery Station',
+  description: 'Battery swap station interface with QR authentication',
 }
 
 export default function RootLayout({
@@ -13,7 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={montserrat.className}>
+        <ThirdwebProvider>{children}</ThirdwebProvider>
+      </body>
     </html>
   )
 }

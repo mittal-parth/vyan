@@ -1,23 +1,24 @@
-# Battery Swap Station Interface
+# Vyan Battery Station Interface
 
-A lightweight React-based interface for battery swap stations running on Raspberry Pi devices. This interface handles NFC authentication, battery swap operations, and communicates with the SwapToken smart contract.
+A lightweight React-based interface for battery swap stations running on Raspberry Pi devices. This interface handles QR code authentication, battery swap operations, and integrates with the Vyan mobile app ecosystem.
 
 ## Features
 
-- **NFC Authentication**: Secure user authentication via NFC tap
+- **QR Code Authentication**: Secure user authentication via QR code scanning
+- **Auto-Refresh QR**: QR codes refresh every 30 seconds for security
 - **Real-time Status**: Display station battery levels and available batteries
 - **Swap Operations**: Complete battery swap process with visual feedback
-- **Token Integration**: Automatic SwapToken rewards for completed swaps
-- **Priority Lane**: Support for priority lane access based on staked tokens
-- **Responsive Design**: Optimized for touch interfaces on Pi displays
+- **ThirdWeb Integration**: Blockchain integration for token rewards
+- **Clean UI**: Neumorphic design optimized for touch interfaces on Pi displays
 
 ## User Journey
 
-1. **User Arrives**: Rider finds nearest station with capacity visible
-2. **NFC Authentication**: User taps phone via NFC → station authenticates
-3. **Backend Recording**: Station sends signed swap event to backend
-4. **Contract Update**: Smart contract receives update event and mints tokens
-5. **Token Reward**: Frontend displays token reward to user
+1. **Tap to Start**: User taps "Tap to Get Started" on station display
+2. **QR Code Display**: Station shows QR code that refreshes every 30 seconds
+3. **Mobile App Scan**: User scans QR with Vyan mobile app
+4. **Authentication**: Station displays "Hi [username], follow instructions on your app"
+5. **Swap Process**: User follows mobile app instructions to complete swap
+6. **Success**: Station shows success message and returns to idle state
 
 ## Setup Instructions
 
@@ -34,29 +35,31 @@ A lightweight React-based interface for battery swap stations running on Raspber
 cd station-interface
 ```
 
-2. Install dependencies:
+2. Install dependencies using bun:
 ```bash
-npm install
-# or
-yarn install
+bun install
 ```
 
-3. Start the development server:
+3. Create environment file:
 ```bash
-npm run dev
-# or
-yarn dev
+cp .env.example .env.local
+# Edit .env.local with your actual values
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. Start the development server:
+```bash
+bun dev
+```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Production Build
 
 For deployment on Raspberry Pi:
 
 ```bash
-npm run build
-npm start
+bun run build
+bun start
 ```
 
 ## Configuration
@@ -66,9 +69,10 @@ npm start
 Create a `.env.local` file in the station interface directory:
 
 ```env
+NEXT_PUBLIC_TEMPLATE_CLIENT_ID=your_thirdweb_client_id
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x... # SwapToken contract address
 NEXT_PUBLIC_STATION_ID=1 # Unique station identifier
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 # Backend API URL
+NEXT_PUBLIC_APP_URL=https://your-vyan-app.com # Vyan mobile app URL
 ```
 
 ### Station Registration

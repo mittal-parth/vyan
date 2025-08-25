@@ -15,8 +15,8 @@ export const client = createThirdwebClient({
 
 // Define the chain (update this with your actual chain configuration)
 export const chain = defineChain({
-  id: 1328, // SEI testnet chain ID - matches wallet connection
-  rpc: `https://1328.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID}`,
+  id: 1329, // SEI testnet chain ID, update if different
+  rpc: "https://evm-rpc-testnet.sei-apis.com",
 });
 
 // Contract configuration

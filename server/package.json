@@ -1,0 +1,24 @@
+{
+  "name": "vyan-server",
+  "version": "1.0.0",
+  "description": "Vyan Battery Swap Station Backend",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "curl http://localhost:8000/"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["battery-swap", "ev", "station"],
+  "author": "Vyan Team",
+  "license": "MIT"
+}
