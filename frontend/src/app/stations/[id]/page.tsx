@@ -62,6 +62,23 @@ export default function StationDetailPage({ params }: { params: { id: string } }
 
   // Get station data from centralized data
   const station = getStationByNumericId(parseInt(params.id));
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Cleanup event listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
   
   if (!station) {
     return (
@@ -314,8 +331,8 @@ export default function StationDetailPage({ params }: { params: { id: string } }
               BigInt(-122419400),           // _longitude (-122.4194 * 1e6)
               BigInt(20),                   // _totalSlots
               BigInt("5000000000000000"),   // _baseFee (0.005 ETH)
-              BigInt(50),                   // _rating (5.0 out of 5)
-              BigInt(12)                    // _availableSlots
+              50,                           // _rating (5.0 out of 5) - uint16
+              BigInt(12)                    // _availableSlots - uint256
             ]
           });
           
@@ -345,7 +362,7 @@ export default function StationDetailPage({ params }: { params: { id: string } }
           });
 
           if (userBatteries.length > 0) {
-            const batteryId = userBatteries[0].id;
+            const batteryId = BigInt(userBatteries[0].id);
             setUserBatteryId(batteryId);
           }
           
@@ -372,7 +389,7 @@ export default function StationDetailPage({ params }: { params: { id: string } }
 
       // Get the first available battery for fee calculation
       if (userBatteries.length > 0) {
-        const batteryId = userBatteries[0].id;
+        const batteryId = BigInt(userBatteries[0].id);
         setUserBatteryId(batteryId);
         
         const fee = await readContract({
@@ -599,13 +616,6 @@ export default function StationDetailPage({ params }: { params: { id: string } }
     }
   };
 
-  // Cleanup camera on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
     document.addEventListener('mousemove', handleMouseMove);
@@ -674,15 +684,6 @@ export default function StationDetailPage({ params }: { params: { id: string } }
     document.removeEventListener('touchmove', handleTouchMove);
     document.removeEventListener('touchend', handleTouchEnd);
   };
-
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, []);
 
   // Show QR Scanner Interface
   if (!hasScanned) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Map, { Marker, GeolocateControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { getStatusColor, type Station } from "@/data/stations";
@@ -131,9 +132,11 @@ function CarInfoSection() {
       <div className="bg-custom-bg-shadow-dark shadow-neuro-dark-deep rounded-2xl p-4 relative overflow-hidden">
         {/* Background car image */}
         <div className="absolute right-0 top-0 opacity-80">
-          <img
+          <Image
             src="/cybertruck.png"
             alt="Tesla Model X"
+            width={128}
+            height={80}
             className="w-32 h-20 object-contain"
           />
         </div>

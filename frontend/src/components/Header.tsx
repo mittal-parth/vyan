@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ConnectWallet } from "./ConnectWallet";
 
 interface HeaderProps {
@@ -20,9 +21,11 @@ export function Header({
       
       {/* Logo and Title */}
       <Link href={homeHref} className="flex items-center gap-3">
-        <img 
+        <Image 
           src="/logo.png" 
           alt="Vyan Logo" 
+          width={32}
+          height={32}
           className="h-8 w-auto"
         />
         <p className="text-neutral-400 text-medium font-medium">{title}</p>

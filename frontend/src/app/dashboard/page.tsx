@@ -483,7 +483,7 @@ function StationsView() {
           <div className="text-center">
             <TbMap className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
             <h3 className="text-neutral-200 text-lg font-semibold mb-2">No Stations Found</h3>
-            <p className="text-neutral-400 mb-4">You don't have any registered stations yet</p>
+            <p className="text-neutral-400 mb-4">You don&apos;t have any registered stations yet</p>
             <p className="text-neutral-500 text-sm mb-4">Connected: {account.address?.slice(0, 6)}...{account.address?.slice(-4)}</p>
             <button
               onClick={refetchStations}

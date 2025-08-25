@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { STATIONS, type Station } from "@/data/stations";
@@ -86,9 +87,11 @@ function StationCard({ station }: { station: Station }) {
       <div className="flex items-center space-x-4">
         {/* Left Side - Image with Rating */}
         <div className="relative flex-shrink-0">
-          <img 
+          <Image 
             src={station.image || "/battery-1.png"} 
             alt={station.name}
+            width={64}
+            height={80}
             className="w-16 h-20 rounded-lg object-cover"
           />
           <div className="absolute -top-1 -left-1 bg-emerald-900 rounded-lg px-1.5 py-0.5 flex items-center space-x-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { TbBatteryFilled, TbGauge, TbTemperature } from "react-icons/tb";
 import { Header } from "@/components/Header";
 
@@ -26,9 +27,11 @@ function CarSection() {
   return (
     <div className="p-2 flex items-center justify-center">
       {/* Cybertruck image */}
-      <img 
+      <Image 
         src="/cybertruck.png" 
         alt="Tesla Cybertruck" 
+        width={100}
+        height={100}
         className="object-contain w-100 h-100"
       />
     </div>
@@ -98,7 +101,7 @@ function InformationSection() {
   );
 }
 
-export function InfoCard({ title, subtitle, className = "flex-1" }: {
+function InfoCard({ title, subtitle, className = "flex-1" }: {
   title: string;
   subtitle: string;
   className?: string;
