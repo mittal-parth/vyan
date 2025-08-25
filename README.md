@@ -1,6 +1,6 @@
 # Vyan - Battery Swap Ecosystem
 
-A complete battery swap ecosystem with mobile app, station interface, and blockchain integration. Users can find nearby stations, swap batteries via NFC, and earn tokens for discounts and priority access.
+An EV Battery Swapping, De-PIN ecosystem on the Sei Blockchain with AI powered inventory rebalancing.
 
 ## 🚀 Project Overview
 
@@ -16,7 +16,7 @@ Vyan is a decentralized battery swap network that enables electric vehicle users
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Mobile App    │    │ Station Interface│    │  Smart Contract │
-│   (Frontend)    │◄──►│   (Raspberry Pi) │◄──►│   (SwapToken)   │
+│   (Frontend)    │◄──►│                  │◄──►│   (Vyan)   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -30,33 +30,21 @@ Vyan is a decentralized battery swap network that enables electric vehicle users
 ## 📱 User Journey
 
 1. **Find Station**: User opens app, finds nearest station with capacity
-2. **Arrive & Tap**: User arrives at station, taps phone via NFC
-3. **Authentication**: Station Pi verifies identity and releases battery
-4. **Backend Record**: Pi sends signed swap event to backend
-5. **Token Reward**: User receives SwapTokens in their wallet
-6. **Redeem**: Tokens can be staked for priority lane or used for discounts
+2. **Scan QR Code**: User arrives at station and scans the QR code displayed on the station interface
+3. **Session Start**: App automatically connects to the station and shows station details, battery status, and estimated swap fee
+4. **Insert Battery**: User inserts their discharged battery and confirms via the app
+5. **Payment & Confirmation**: User confirms payment using the slider button, pays via Thirdweb integration
+6. **Battery Release**: Once payment is confirmed, a fresh battery is automatically released from the station
+7. **AI Monitoring**: The system automatically monitors station inventory and triggers rebalancing when needed
+8. **Token Reward**: User receives SwapTokens in their wallet for completing the swap
+9. **Redeem**: Tokens can be staked for priority lane access or used for discounts on future swaps
 
-## 🛠️ Components
+### Station Operator Flow
+- **Real-time Monitoring**: Web dashboard shows live station status and AI-generated rebalancing recommendations
+- **AI-Powered Insights**: System analyzes traffic patterns, demand forecasts, and proximity to optimize battery distribution
+- **Automated Alerts**: Receive notifications when stations need refueling or rebalancing
+- **Strategic Planning**: View AI-generated rebalancing strategies considering multiple factors like traffic, demand patterns, and truck availability
 
-### Frontend (`/frontend`)
-- Tesla Cybertruck-inspired mobile interface
-- Neumorphic design system
-- Real-time vehicle status monitoring
-- Battery and climate controls
-
-### Station Interface (`/station-interface`)
-- Lightweight React app for Raspberry Pi
-- NFC authentication simulation
-- Battery swap process management
-- Token reward display
-- Same styling as main frontend
-
-### Smart Contract (`/contracts`)
-- **SwapToken.sol**: ERC20 token with staking functionality
-- Automatic token rewards (10 SWAP per swap)
-- Priority lane staking (100+ tokens for 7+ days)
-- Station registration and management
-- Comprehensive event tracking
 
 ## 🚀 Quick Start
 
@@ -105,22 +93,6 @@ cd contracts
 npx hardhat compile
 npx hardhat run scripts/deploy.js --network localhost
 ```
-
-## 🎨 Design System
-
-The project uses a consistent neumorphic design system:
-
-- **Colors**: Dark theme with custom color palette
-- **Shadows**: Neumorphic shadows for depth and interaction
-- **Typography**: Inter font family
-- **Components**: Reusable UI components across interfaces
-
-### Key Design Elements
-- `bg-custom-bg-dark`: Primary background (#111114)
-- `bg-custom-bg-light`: Secondary background (#36363C)
-- `shadow-neuro-dark-outset`: Outset shadows for buttons
-- `shadow-neuro-dark-inset`: Inset shadows for pressed states
-
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -144,26 +116,6 @@ PRIVATE_KEY=your_private_key
 INFURA_URL=your_infura_url
 ```
 
-## 📊 Smart Contract Features
-
-### SwapToken (SWAP)
-- **Total Supply**: 1,000,000 tokens
-- **Swap Reward**: 10 tokens per battery swap
-- **Minimum Stake**: 100 tokens for priority lane
-- **Lock Duration**: 7 days minimum for staking
-
-### Key Functions
-- `completeBatterySwap()`: Process swap and reward tokens
-- `stakeForPriorityLane()`: Stake tokens for priority access
-- `registerStation()`: Register new swap stations
-- `getUserStats()`: Get user statistics and balances
-
-## 🔐 Security Features
-
-- **Access Controls**: Only registered stations can process swaps
-- **Reentrancy Protection**: Secure against reentrancy attacks
-- **Input Validation**: Comprehensive parameter validation
-- **Event Logging**: All operations logged on-chain
 
 ## 🧪 Testing
 
@@ -180,28 +132,7 @@ npx hardhat test
 npx hardhat coverage
 ```
 
-### Integration Testing
-1. Deploy contract to testnet
-2. Register test station
-3. Test complete swap flow
-4. Verify token rewards and staking
 
-## 📈 Performance
-
-### Frontend
-- Optimized for mobile devices
-- Lazy loading and code splitting
-- Efficient state management
-
-### Station Interface
-- Lightweight for Raspberry Pi
-- Touch-optimized interactions
-- Minimal resource usage
-
-### Smart Contract
-- Gas-optimized operations
-- Efficient storage patterns
-- Batch operations where possible
 
 ## 🚀 Deployment
 
@@ -212,17 +143,11 @@ npm run build
 # Deploy to your preferred platform
 ```
 
-### Station Interface (Raspberry Pi)
+### Station Interface
 ```bash
 cd station-interface
+npm i
 npm run build
-npm start
-```
-
-### Smart Contract (Mainnet)
-```bash
-cd contracts
-npx hardhat run scripts/deploy.js --network mainnet
 ```
 
 ## 🤝 Contributing
@@ -237,23 +162,5 @@ npx hardhat run scripts/deploy.js --network mainnet
 
 MIT License - see LICENSE file for details
 
-## 🆘 Support
-
-For questions or issues:
-1. Check the documentation
-2. Review existing issues
-3. Open a new issue with details
-4. Contact the development team
-
-## 🔮 Roadmap
-
-- [ ] Real NFC hardware integration
-- [ ] Multi-chain support
-- [ ] Advanced analytics dashboard
-- [ ] Mobile app (React Native)
-- [ ] IoT sensor integration
-- [ ] Machine learning for demand prediction
-
----
 
 Built with ❤️ for the future of sustainable transportation
